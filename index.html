@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="bookmark-dial">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Tab</title>
+</head>
+<body>
+
+<div class="header flex items-center justify-end mb-7">
+  <div class="flex gap-2 items-center">
+    <input
+      id="search"
+      type="text"
+      placeholder="Buscar favoritos..."
+      autocomplete="off"
+      class="input input-bordered input-sm w-80 bg-base-content/5 border-base-content/10 focus:border-base-content/25 placeholder:text-base-content/40"
+    />
+    <button id="btn-shuffle" class="btn btn-sm bg-base-content/5 border-base-content/10 hover:bg-base-content/15 hover:border-base-content/20" title="Shuffle"></button>
+    <button id="btn-settings" class="btn btn-sm btn-square bg-base-content/5 border-base-content/10 hover:bg-base-content/15 hover:border-base-content/20" title="Gerenciar seções" aria-label="Gerenciar seções"></button>
+  </div>
+</div>
+
+<div id="app"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

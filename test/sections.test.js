@@ -1,64 +1,61 @@
-// test/sections.test.js — node test/sections.test.js
-const s = require('../sections.js');
-const assert = require('assert');
+// test/sections.test.js — npm test
+import { describe, it, expect } from 'vitest';
+import {
+  slugify, uniqueSectionId, seedCategorize, reconcileMembership, SEED_RULES,
+} from '../src/sections.js';
 
-let pass = 0, fail = 0;
-function test(name, fn){
-  try { fn(); console.log('  ok', name); pass++; }
-  catch(e){ console.log('  FAIL', name, '\n   ', e.message); fail++; }
-}
-
-console.log('slugify:');
-test('basic ASCII', () => assert.strictEqual(s.slugify('Hello World'), 'hello-world'));
-test('accents', () => assert.strictEqual(s.slugify('Praticar Música'), 'praticar-musica'));
-test('special chars', () => assert.strictEqual(s.slugify('AI & LLMs!!!'), 'ai-llms'));
-test('empty', () => assert.strictEqual(s.slugify(''), 'section'));
-test('truncate long', () => assert.strictEqual(s.slugify('a'.repeat(60)).length, 40));
-
-console.log('uniqueSectionId:');
-test('no conflict', () => assert.strictEqual(s.uniqueSectionId('foo', ['a','b']), 'foo'));
-test('one conflict -> -2', () => assert.strictEqual(s.uniqueSectionId('foo', ['foo','b']), 'foo-2'));
-test('two conflicts -> -3', () => assert.strictEqual(s.uniqueSectionId('foo', ['foo','foo-2']), 'foo-3'));
-
-console.log('seedCategorize:');
-const ytMusic = { url: 'https://youtube.com/watch?v=abc', folderList: ['Bookmarks Bar','Music'] };
-const ytSolo  = { url: 'https://youtube.com/watch?v=xyz', folderList: ['Bookmarks Bar'] };
-const ghRepo  = { url: 'https://github.com/foo/bar',     folderList: ['Bookmarks Bar','Nice repos'] };
-const random  = { url: 'https://example.com',            folderList: ['Bookmarks Bar'] };
-const ecomm   = { url: 'https://shop.example.com',       folderList: ['🟠 Ecomm'] };
-
-test('YouTube em pasta Music -> music (pasta vence URL)',
-  () => assert.strictEqual(s.seedCategorize(ytMusic, s.SEED_RULES), 'music'));
-test('YouTube solto -> watch',
-  () => assert.strictEqual(s.seedCategorize(ytSolo, s.SEED_RULES), 'watch'));
-test('GitHub em pasta Nice repos -> code',
-  () => assert.strictEqual(s.seedCategorize(ghRepo, s.SEED_RULES), 'code'));
-test('Pasta "🟠 Ecomm" -> work',
-  () => assert.strictEqual(s.seedCategorize(ecomm, s.SEED_RULES), 'work'));
-test('Sem match -> null (inbox)',
-  () => assert.strictEqual(s.seedCategorize(random, s.SEED_RULES), null));
-
-console.log('reconcileMembership:');
-test('Mantém existentes, adiciona novos ao inbox', () => {
-  const r = s.reconcileMembership(
-    { 'a': 'music' },
-    [ { id:'a' }, { id:'b' } ],
-    'inbox'
-  );
-  assert.deepStrictEqual(r.membership, { a:'music', b:'inbox' });
-  assert.deepStrictEqual(r.added, ['b']);
-  assert.deepStrictEqual(r.removed, []);
+describe('slugify', () => {
+  it('basic ASCII', () => expect(slugify('Hello World')).toBe('hello-world'));
+  it('accents', () => expect(slugify('Praticar Música')).toBe('praticar-musica'));
+  it('special chars', () => expect(slugify('AI & LLMs!!!')).toBe('ai-llms'));
+  it('empty', () => expect(slugify('')).toBe('section'));
+  it('truncate long', () => expect(slugify('a'.repeat(60)).length).toBe(40));
 });
 
-test('Remove órfãos', () => {
-  const r = s.reconcileMembership(
-    { 'a':'music', 'gone':'study' },
-    [ { id:'a' } ],
-    'inbox'
-  );
-  assert.deepStrictEqual(r.membership, { a:'music' });
-  assert.deepStrictEqual(r.removed, ['gone']);
+describe('uniqueSectionId', () => {
+  it('no conflict', () => expect(uniqueSectionId('foo', ['a', 'b'])).toBe('foo'));
+  it('one conflict -> -2', () => expect(uniqueSectionId('foo', ['foo', 'b'])).toBe('foo-2'));
+  it('two conflicts -> -3', () => expect(uniqueSectionId('foo', ['foo', 'foo-2'])).toBe('foo-3'));
 });
 
-console.log('\nResult:', pass, 'passed,', fail, 'failed');
-process.exit(fail === 0 ? 0 : 1);
+describe('seedCategorize', () => {
+  const ytMusic = { url: 'https://youtube.com/watch?v=abc', folderList: ['Bookmarks Bar', 'Music'] };
+  const ytSolo  = { url: 'https://youtube.com/watch?v=xyz', folderList: ['Bookmarks Bar'] };
+  const ghRepo  = { url: 'https://github.com/foo/bar',     folderList: ['Bookmarks Bar', 'Nice repos'] };
+  const random  = { url: 'https://example.com',            folderList: ['Bookmarks Bar'] };
+  const ecomm   = { url: 'https://shop.example.com',       folderList: ['🟠 Ecomm'] };
+
+  it('YouTube em pasta Music -> music (pasta vence URL)',
+    () => expect(seedCategorize(ytMusic, SEED_RULES)).toBe('music'));
+  it('YouTube solto -> watch',
+    () => expect(seedCategorize(ytSolo, SEED_RULES)).toBe('watch'));
+  it('GitHub em pasta Nice repos -> code',
+    () => expect(seedCategorize(ghRepo, SEED_RULES)).toBe('code'));
+  it('Pasta "🟠 Ecomm" -> work',
+    () => expect(seedCategorize(ecomm, SEED_RULES)).toBe('work'));
+  it('Sem match -> null (inbox)',
+    () => expect(seedCategorize(random, SEED_RULES)).toBeNull());
+});
+
+describe('reconcileMembership', () => {
+  it('Mantém existentes, adiciona novos ao inbox', () => {
+    const r = reconcileMembership(
+      { a: 'music' },
+      [{ id: 'a' }, { id: 'b' }],
+      'inbox'
+    );
+    expect(r.membership).toEqual({ a: 'music', b: 'inbox' });
+    expect(r.added).toEqual(['b']);
+    expect(r.removed).toEqual([]);
+  });
+
+  it('Remove órfãos', () => {
+    const r = reconcileMembership(
+      { a: 'music', gone: 'study' },
+      [{ id: 'a' }],
+      'inbox'
+    );
+    expect(r.membership).toEqual({ a: 'music' });
+    expect(r.removed).toEqual(['gone']);
+  });
+});

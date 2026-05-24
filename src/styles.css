@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Base layout — background gradient
+   ============================================================ */
+html, body {
+  min-height: 100vh;
+}
+body {
+  @apply bg-bd-gradient text-base-content;
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  padding: 28px 36px 60px;
+}
+
+/* ============================================================
+   Drag-and-drop visuals
+   ============================================================ */
+.dial-wrap[draggable="true"] { cursor: grab; }
+.dial-wrap.bd-card-dragging  { opacity: 0.35; cursor: grabbing; }
+
+body.bd-dragging .bd-group .bd-group-head {
+  outline: 2px dashed rgba(255, 255, 255, 0.18);
+  outline-offset: 4px;
+  border-radius: 6px;
+  transition: outline 0.12s ease, background 0.12s ease;
+}
+body.bd-dragging .bd-group.bd-drop-target .bd-group-head {
+  outline: 2px solid rgba(120, 200, 255, 0.85);
+  background: rgba(120, 200, 255, 0.08);
+}
+body.bd-dragging .bd-empty-section {
+  @apply border-primary/50 text-base-content/70;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 768px) {
+  body { padding: 16px; }
+  .bd-carousel-track .dial-wrap { width: 140px !important; min-width: 140px !important; }
+  .bd-card-thumb { height: 85px !important; }
+}
