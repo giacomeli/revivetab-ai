@@ -1,52 +1,26 @@
 // dial.js
-// Main rendering, walk, search, carousel, init, bookmark listeners.
+// Main rendering, search, carousel, init, bookmark listeners.
 
-import { STATE, dbg, getLog } from './state.js';
+import { STATE, dbg, getLog, tstamp, timed, timedAsync } from './state.js';
+import { collectBookmarks } from './tree.js';
+import { ytId } from './yt.js';
 import { iconSVG } from './icons.js';
 import {
   loadAll, saveSections, saveMembership, saveMeta, saveInitialBackup,
 } from './storage.js';
-import { ensureSeeded, reconcileMembership } from './sections.js';
-import { setupDragAndDrop, registerRenderer as registerDndRenderer } from './dnd.js';
+import { ensureSeeded, reconcileMembership, needsReSeed, reSeedAll, SEED_VERSION } from './sections.js';
+import { setupDragAndDrop, registerRenderer as registerDndRenderer, cleanupDragState } from './dnd.js';
 import { openSectionsModal, registerRenderer as registerModalRenderer } from './modal-sections.js';
+import { registerRenderer as registerAiRenderer } from './modal-ai.js';
 import { editBookmark, deleteBookmark, registerRenderer as registerOpsRenderer } from './bookmark-ops.js';
 import { showModal } from './modal.js'; // ensure side imports
-
-// ============================================================
-// TREE WALKER
-// ============================================================
-export function walk(node, folders) {
-  let out = [];
-  const name = (node.title || '').trim();
-  const next = name ? folders.concat([name]) : folders.slice();
-  if (node.url) {
-    const fset = new Set(next);
-    out.push({
-      id: node.id,
-      title: node.title || '(sem titulo)',
-      url: node.url,
-      folders: fset,
-      folderList: next,
-      added: node.dateAdded || 0,
-    });
-  }
-  if (node.children) {
-    for (const child of node.children) {
-      out = out.concat(walk(child, next));
-    }
-  }
-  return out;
-}
+import { openVideoModal } from './video-modal.js';
 
 // ============================================================
 // HELPERS
 // ============================================================
 function extractDomain(u) {
   try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
-}
-function ytId(u) {
-  const m = u.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
 }
 function clean(t) {
   return t.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube$/, '')
@@ -89,6 +63,17 @@ function groupByMembership(bookmarks, membership, sections) {
   }
   return out;
 }
+
+// ============================================================
+// CONFIG
+// ============================================================
+// Cap on cards rendered per section. Above this, MAX_PER_SECTION items are
+// picked at random (shuffle + slice) from the section's bookmarks. Remaining
+// are still searchable via the search box. Main perf knob (initCarousels was
+// 570ms+ before this cap).
+const MAX_PER_SECTION = 50;
+const CARD_WIDTH_PX = 170;
+const CARD_GAP_PX = 10;
 
 // ============================================================
 // CARD HTML
@@ -136,8 +121,10 @@ function cardHTML(bm) {
     ? `<div class="bd-card-breadcrumb text-[0.58rem] text-base-content/45 truncate mb-0.5">${crumbs.map((f) => esc(f)).join(' <span class="opacity-50 mx-0.5">›</span> ')}</div>`
     : '';
 
+  // Width classes applied here (in the HTML template) to avoid a giant
+  // post-render loop adding them per-card in initCarousels.
   return `
-    <div class="dial-wrap group/card relative flex flex-col overflow-hidden rounded-2xl bg-base-content/5 hover:bg-base-content/10 border border-base-content/5 hover:border-base-content/15 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer"
+    <div class="dial-wrap group/card relative flex flex-col overflow-hidden rounded-2xl bg-base-content/5 hover:bg-base-content/10 border border-base-content/5 hover:border-base-content/15 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer flex-none w-[170px] min-w-[170px]"
          data-bm-id="${esc(bm.id)}" data-href="${esc(bm.url)}" title="${esc(bm.title)}">
       ${actions}
       <div class="bd-card-thumb relative h-[105px] flex items-center justify-center overflow-hidden bg-black/25">
@@ -203,15 +190,22 @@ function loadThumb(img) {
 // SECTION HTML
 // ============================================================
 function sectionHTML(sec, items) {
-  const pick = shuffle(items);
+  const total = items.length;
+  const capped = total > MAX_PER_SECTION;
+  // shuffle for variety; if capped, only build HTML for the first MAX_PER_SECTION.
+  const pick = capped ? shuffle(items).slice(0, MAX_PER_SECTION) : shuffle(items);
   const cards = pick.map((bm) => cardHTML(bm)).join('');
   const iconHtml = iconSVG(sec.icon || 'bookmark', 18);
+  const countBadge = capped
+    ? `<span class="badge badge-sm badge-ghost ml-2 opacity-60" title="Total ${total} — mostrando ${MAX_PER_SECTION} aleatórios (clique Shuffle para outros, use a busca para encontrar específicos)">${total}/${MAX_PER_SECTION}</span>`
+    : (total > 0 ? `<span class="text-xs opacity-40 ml-2">${total}</span>` : '');
   const headHtml = `
     <div class="bd-group-head flex items-center gap-2.5 pl-1 mb-3.5">
       <span class="bd-group-dot w-1.5 h-1.5 rounded-full" style="background:${esc(sec.color || '#888')}"></span>
       <span class="bd-group-icon inline-flex items-center" style="color:${esc(sec.color || '#ccc')}">${iconHtml}</span>
       <span class="bd-group-label text-sm font-medium opacity-90 cursor-text px-1 py-0.5 rounded hover:bg-base-content/5"
             data-section-id="${esc(sec.id)}" tabindex="0" title="Clique para renomear">${esc(sec.label)}</span>
+      ${countBadge}
     </div>
   `;
   if (!items.length) {
@@ -243,15 +237,31 @@ function sectionHTML(sec, items) {
 // ============================================================
 // RENDER
 // ============================================================
+let _renderCount = 0;
+
 export function renderAll() {
+  _renderCount++;
+  const start = performance.now();
+  cleanupDragState('renderAll');
+  console.log('[BD-RENDER]', tstamp(), 'renderAll start #' + _renderCount, { body: Array.from(document.body.classList).join(' ') || '(none)' });
+
   const app = document.getElementById('app');
-  const byId = groupByMembership(STATE.all, STATE.membership, STATE.sections);
+  const byId = timed('groupByMembership', () => groupByMembership(STATE.all, STATE.membership, STATE.sections));
   const sorted = STATE.sections.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+  const htmlBuildStart = performance.now();
   const html = sorted.map((sec) => sectionHTML(sec, byId[sec.id] || [])).join('');
+  console.log('[BD-PERF]', tstamp(), 'sectionHTML loop', (performance.now() - htmlBuildStart).toFixed(1) + 'ms', '(' + sorted.length + ' sections)');
+
+  const innerHTMLStart = performance.now();
   app.innerHTML = html || '<div class="text-center py-10 opacity-50 text-sm">Nenhuma seção configurada.</div>';
-  initCarousels();
-  initThumbObserver();
-  setupDragAndDrop();
+  console.log('[BD-PERF]', tstamp(), 'app.innerHTML set', (performance.now() - innerHTMLStart).toFixed(1) + 'ms');
+
+  timed('initCarousels', () => initCarousels());
+  timed('initThumbObserver', () => initThumbObserver());
+  timed('setupDragAndDrop', () => setupDragAndDrop());
+
+  const total = (performance.now() - start).toFixed(1);
+  console.log('[BD-RENDER]', tstamp(), 'renderAll #' + _renderCount + ' done in ' + total + 'ms');
 }
 
 // ============================================================
@@ -265,12 +275,14 @@ function setupCarousel(viewport) {
   const track = viewport.querySelector('.bd-carousel-track');
   const cards = Array.from(track.querySelectorAll('.dial-wrap'));
   if (!cards.length) return;
-  const gap = 10;
-  // ensure card has fixed width via Tailwind utilities
-  cards.forEach((c) => { c.classList.add('flex-none', 'w-[170px]', 'min-w-[170px]'); });
-  const cardW = cards[0].offsetWidth + gap;
-  const visibleCount = Math.ceil(viewport.offsetWidth / cardW);
+
+  // Width/gap come from constants — no offsetWidth read needed for the card.
+  // We DO read viewport.offsetWidth (once), but only after all cards have
+  // their fixed widths applied via cardHTML's Tailwind classes.
+  const cardW = CARD_WIDTH_PX + CARD_GAP_PX;
+  const visibleCount = Math.max(1, Math.ceil(viewport.offsetWidth / cardW));
   const shouldLoop = cards.length > visibleCount;
+
   const leftBtn = viewport.querySelector('.bd-carousel-arrow.left');
   const rightBtn = viewport.querySelector('.bd-carousel-arrow.right');
 
@@ -293,22 +305,29 @@ function setupCarousel(viewport) {
 
   if (!shouldLoop) return;
 
+  // Build clone block in a DocumentFragment first (offline DOM), then insert
+  // in two batches. Single deep-clone per slot, no per-card layout thrash.
   const cloneCount = visibleCount + 1;
+
+  const prependFrag = document.createDocumentFragment();
   for (let i = cards.length - cloneCount; i < cards.length; i++) {
     const idx = Math.max(0, i);
     const clone = cards[idx].cloneNode(true);
     clone.classList.add('bd-carousel-clone');
     const actions = clone.querySelector('.dial-actions');
     if (actions) actions.remove();
-    track.insertBefore(clone, track.firstChild);
+    prependFrag.appendChild(clone);
   }
+  const appendFrag = document.createDocumentFragment();
   for (let i = 0; i < cloneCount && i < cards.length; i++) {
     const clone = cards[i].cloneNode(true);
     clone.classList.add('bd-carousel-clone');
     const actions = clone.querySelector('.dial-actions');
     if (actions) actions.remove();
-    track.appendChild(clone);
+    appendFrag.appendChild(clone);
   }
+  track.insertBefore(prependFrag, track.firstChild);
+  track.appendChild(appendFrag);
 
   track.style.scrollBehavior = 'auto';
   track.scrollLeft = cloneCount * cardW;
@@ -339,9 +358,17 @@ function setupCarousel(viewport) {
 }
 
 let resizeTimer;
+let _initDone = false;
 window.addEventListener('resize', () => {
+  if (!_initDone) {
+    console.log('[BD-PERF]', tstamp(), 'resize ignored (init not done)');
+    return;
+  }
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (STATE.all.length) renderAll(); }, 300);
+  resizeTimer = setTimeout(() => {
+    console.log('[BD-PERF]', tstamp(), 'resize triggering renderAll');
+    if (STATE.all.length) renderAll();
+  }, 300);
 });
 
 // ============================================================
@@ -385,6 +412,7 @@ function startRenameSection(labelEl) {
   const sectionId = labelEl.getAttribute('data-section-id');
   const sec = STATE.sections.find((s) => s.id === sectionId);
   if (!sec) return;
+  console.warn('[BD-RENAME] startRenameSection called', { sectionId, label: sec.label });
   const oldLabel = sec.label;
   labelEl.classList.add('bg-base-content/10', 'outline', 'outline-1', 'outline-primary/50');
   labelEl.setAttribute('contenteditable', 'true');
@@ -470,6 +498,7 @@ export async function init() {
   registerDndRenderer(renderAll);
   registerModalRenderer(renderAll);
   registerOpsRenderer(renderAll);
+  registerAiRenderer(renderAll);
 
   const app = document.getElementById('app');
   app.innerHTML = '<div class="text-center py-10 opacity-50 text-sm">Carregando favoritos...</div>';
@@ -487,8 +516,9 @@ export async function init() {
       });
     });
 
-    STATE.all = [];
-    for (const root of tree) STATE.all = STATE.all.concat(walk(root, []));
+    timed('collectBookmarks(tree)', () => {
+      STATE.all = collectBookmarks(tree);
+    });
     dbg('total bookmarks: ' + STATE.all.length);
 
     const loaded = await loadAll();
@@ -507,6 +537,13 @@ export async function init() {
         saveInitialBackup,
         { sections: saveSections, membership: saveMembership, meta: saveMeta }
       );
+    } else if (needsReSeed(state.meta)) {
+      // Regras de seed mudaram de versão: re-semear membership com as regras
+      // novas. Não toca em bd:sections nem em bd:initial-backup.
+      dbg('seed rules v' + (state.meta.version || 1) + ' -> v' + SEED_VERSION + ': re-seeding membership');
+      state.membership = await reSeedAll(STATE.all, saveMembership);
+      state.meta = { version: SEED_VERSION, seeded: true };
+      await saveMeta(state.meta);
     } else {
       const rec = reconcileMembership(state.membership, STATE.all, 'inbox');
       if (rec.added.length || rec.removed.length) {
@@ -523,7 +560,8 @@ export async function init() {
 
     renderAll();
     setupBookmarkListeners();
-    dbg('render complete');
+    _initDone = true;
+    dbg('render complete (init unblocked)');
   } catch (err) {
     dbg('ERROR: ' + err.message);
     app.innerHTML = `
@@ -556,6 +594,7 @@ export function wireEvents() {
     }
     const labelEl = e.target.closest('.bd-group-label[data-section-id]');
     if (labelEl && labelEl.getAttribute('contenteditable') !== 'true') {
+      console.log('[BD-CLICK] label click -> startRename', { sectionId: labelEl.getAttribute('data-section-id') });
       e.preventDefault(); e.stopPropagation();
       startRenameSection(labelEl);
       return;
@@ -563,7 +602,14 @@ export function wireEvents() {
     const card = e.target.closest('.dial-wrap[data-href]');
     if (card) {
       const href = card.getAttribute('data-href');
-      if (href) window.location.href = href;
+      if (!href) return;
+      const vid = ytId(href);
+      if (vid) {
+        // Vídeo do YouTube toca em modal na própria new tab.
+        openVideoModal(vid, href, card.getAttribute('title') || '');
+        return;
+      }
+      window.location.href = href;
     }
   });
 

@@ -6,7 +6,7 @@ export function showModal(html, options = {}) {
   closeModal();
   const overlay = document.createElement('div');
   overlay.className = 'modal modal-open bd-modal-overlay';
-  const boxClass = options.wide ? 'modal-box max-w-2xl p-0' : 'modal-box';
+  const boxClass = options.boxClass || (options.wide ? 'modal-box max-w-2xl p-0' : 'modal-box');
   overlay.innerHTML =
     `<div class="${boxClass}">${html}</div>` +
     `<div class="modal-backdrop bg-black/60"></div>`;

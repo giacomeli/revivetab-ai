@@ -5,3 +5,6 @@
 node_modules/
 dist/
 .vite/
+
+# backups locais de dados pessoais (referencia de dev)
+util/

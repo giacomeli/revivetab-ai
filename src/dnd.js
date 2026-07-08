@@ -1,60 +1,160 @@
 // dnd.js
 // HTML5 Drag-and-Drop handlers for moving bookmark cards between sections.
 
-import { STATE } from './state.js';
+import { STATE, tstamp } from './state.js';
 import { saveMembership } from './storage.js';
 
 let _renderAll = null;
 export function registerRenderer(fn) { _renderAll = fn; }
 
+let _globalsWired = false;
+let _dragSeq = 0;
+let _currentDragId = null;
+let _dragStartTime = 0;
+
+const DND_LOG = true; // toggle off in production if too noisy
+function log(...args) { if (DND_LOG) console.log('[BD-DND]', tstamp(), ...args); }
+function bodyClasses() { return Array.from(document.body.classList).join(' ') || '(none)'; }
+
 export function setupDragAndDrop() {
+  const start = performance.now();
+  _wireGlobalsOnce();
   const cards = document.querySelectorAll('.dial-wrap');
+  let real = 0, clones = 0;
   for (const card of cards) {
     if (card.classList.contains('bd-carousel-clone')) {
       card.setAttribute('draggable', 'false');
+      clones++;
     } else {
       card.setAttribute('draggable', 'true');
       _wireCard(card);
+      real++;
     }
   }
   const zones = document.querySelectorAll('.bd-group-head, .bd-carousel');
   for (const zone of zones) _wireZone(zone);
+  const dur = (performance.now() - start).toFixed(1);
+  log('setupDragAndDrop wired', { realCards: real, clones, zones: zones.length, durMs: dur });
+}
+
+// cleanupDragState — removes ALL drag-related classes from the document.
+export function cleanupDragState(reason) {
+  const had = {
+    bodyDragging: document.body.classList.contains('bd-dragging'),
+    cardDragging: document.querySelectorAll('.bd-card-dragging').length,
+    dropTargets: document.querySelectorAll('.bd-drop-target').length,
+  };
+  document.body.classList.remove('bd-dragging');
+  document.querySelectorAll('.bd-card-dragging')
+    .forEach((el) => el.classList.remove('bd-card-dragging'));
+  document.querySelectorAll('.bd-drop-target')
+    .forEach((el) => el.classList.remove('bd-drop-target'));
+  if (had.bodyDragging || had.cardDragging || had.dropTargets) {
+    log('cleanupDragState', reason || '(no reason)', 'cleared:', had);
+  }
+}
+
+function _wireGlobalsOnce() {
+  if (_globalsWired) return;
+  _globalsWired = true;
+  log('wiring global listeners');
+
+  document.addEventListener('dragend', (e) => {
+    log('doc:dragend (capture)', { target: e.target?.tagName, body: bodyClasses() });
+    cleanupDragState('doc:dragend');
+  }, true);
+
+  document.addEventListener('drop', (e) => {
+    log('doc:drop (capture)', { target: e.target?.tagName, body: bodyClasses() });
+    cleanupDragState('doc:drop');
+  }, true);
+
+  window.addEventListener('mouseup', () => {
+    if (document.body.classList.contains('bd-dragging')) {
+      log('window:mouseup while bd-dragging — forcing cleanup');
+      cleanupDragState('window:mouseup');
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (document.body.classList.contains('bd-dragging')) {
+      log('window:pointerup while bd-dragging — forcing cleanup');
+      cleanupDragState('window:pointerup');
+    }
+  });
+
+  window.addEventListener('blur', () => {
+    if (document.body.classList.contains('bd-dragging')) {
+      log('window:blur while bd-dragging — forcing cleanup');
+      cleanupDragState('window:blur');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('bd-dragging')) {
+      log('ESC pressed during drag — forcing cleanup');
+      cleanupDragState('escape');
+    }
+  });
 }
 
 function _wireCard(card) {
   card.addEventListener('dragstart', (e) => {
     const bmId = _bookmarkIdFromCard(card);
-    if (!bmId) { e.preventDefault(); return; }
+    if (!bmId) {
+      log('dragstart aborted — no bookmarkId on card');
+      e.preventDefault();
+      return;
+    }
+    _dragSeq++;
+    _currentDragId = bmId;
+    _dragStartTime = performance.now();
+    log('dragstart', { seq: _dragSeq, bmId, srcSection: card.closest('.bd-group')?.dataset.sectionId });
     e.dataTransfer.setData('text/plain', bmId);
     e.dataTransfer.effectAllowed = 'move';
     document.body.classList.add('bd-dragging');
     card.classList.add('bd-card-dragging');
   });
-  card.addEventListener('dragend', () => {
-    document.body.classList.remove('bd-dragging');
-    card.classList.remove('bd-card-dragging');
-    document.querySelectorAll('.bd-drop-target').forEach((el) => el.classList.remove('bd-drop-target'));
+  card.addEventListener('dragend', (e) => {
+    const elapsed = _dragStartTime ? (performance.now() - _dragStartTime).toFixed(1) : '?';
+    log('card:dragend', { seq: _dragSeq, bmId: _currentDragId, dropEffect: e.dataTransfer?.dropEffect, body: bodyClasses(), dragDurMs: elapsed });
+    _currentDragId = null;
+    _dragStartTime = 0;
+    cleanupDragState('card:dragend');
   });
 }
 
 function _wireZone(zone) {
   const group = zone.closest('.bd-group');
   if (!group) return;
+  const sectionId = group.getAttribute('data-section-id');
+  const zoneKind = zone.classList.contains('bd-group-head') ? 'head' : 'carousel';
+
   zone.addEventListener('dragover', (e) => {
     if (!document.body.classList.contains('bd-dragging')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (!group.classList.contains('bd-drop-target')) {
+      log('dragenter zone', { sectionId, zoneKind });
+    }
     group.classList.add('bd-drop-target');
   });
   zone.addEventListener('dragleave', (e) => {
-    if (!group.contains(e.relatedTarget)) group.classList.remove('bd-drop-target');
+    if (!group.contains(e.relatedTarget)) {
+      log('dragleave zone', { sectionId, zoneKind });
+      group.classList.remove('bd-drop-target');
+    }
   });
   zone.addEventListener('drop', (e) => {
     e.preventDefault();
-    group.classList.remove('bd-drop-target');
     const bmId = e.dataTransfer.getData('text/plain');
     const destSectionId = group.getAttribute('data-section-id');
-    if (!bmId || !destSectionId) return;
+    log('drop on zone', { destSectionId, zoneKind, bmId, body: bodyClasses() });
+    cleanupDragState('zone:drop');
+    if (!bmId || !destSectionId) {
+      log('drop aborted (no bmId or destSectionId)');
+      return;
+    }
     moveBookmark(bmId, destSectionId);
   });
 }
@@ -67,8 +167,16 @@ function _bookmarkIdFromCard(card) {
 }
 
 export async function moveBookmark(bmId, destSectionId) {
-  if (!STATE.membership || STATE.membership[bmId] === destSectionId) return;
+  const currentSection = STATE.membership ? STATE.membership[bmId] : null;
+  if (!STATE.membership || currentSection === destSectionId) {
+    log('moveBookmark NO-OP (same section)', { bmId, currentSection, destSectionId, body: bodyClasses() });
+    return;
+  }
+  log('moveBookmark MOVING', { bmId, from: currentSection, to: destSectionId });
   STATE.membership[bmId] = destSectionId;
   await saveMembership(STATE.membership);
-  if (_renderAll) _renderAll();
+  if (_renderAll) {
+    log('moveBookmark calling renderAll');
+    _renderAll();
+  }
 }

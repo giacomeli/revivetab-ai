@@ -13,17 +13,35 @@ export const DEFAULT_SECTIONS = [
   { id: 'inbox',   label: 'Não categorizado',    icon: 'inbox',     color: '#888888', order: 999, builtin: true },
 ];
 
-// SEED_RULES — só usadas na primeira semeadura. Pasta tem prioridade sobre URL.
+// Versão das regras de semeadura. Bump força re-seed automático nas
+// instalações existentes (ver needsReSeed).
+export const SEED_VERSION = 2;
+
+// SEED_RULES — usadas na semeadura (primeira instalação ou re-seed).
+// Regras GENÉRICAS, válidas para qualquer usuário: keywords universais de
+// nome de pasta (pt/en, comparadas por token inteiro — ver _folderMatches)
+// e padrões de URL de domínios amplamente conhecidos. Nunca acoplar a
+// estruturas de pastas pessoais. Pasta tem prioridade sobre URL.
 export const SEED_RULES = {
-  study:   { folders: ['study','DevOps','DotNet','Frontend','Backend','Architecture','Laravel','APIs','Mobile','Research','GB','📖'], urls: [] },
-  watch:   { folders: ['🎦','videos'], urls: [/youtube\.com\/watch/, /animesonline|topflix/] },
-  music:   { folders: ['Music'], urls: [/cifraclub|casadagaitaponto/] },
-  tools:   { folders: ['~/tools','Util'], urls: [] },
-  code:    { folders: ['.git','Nice repos'], urls: [/github\.com|gitlab\.com/] },
-  ai:      { folders: ['AIs','AI'], urls: [] },
-  work:    { folders: ['work','🟠 Ecomm','🟢 Maestro','Senior','Unig','NFE','Glofi','🔴 RP','Rich','Important'], urls: [] },
-  explore: { folders: ['/var','/tmp','hack','Gaming','Auto','Shopping','Hardware','Finance','Design','Hosting','kb','SEO'], urls: [] },
+  study:   { folders: ['study', 'estudos', 'estudo', 'cursos', 'courses', 'learn', 'docs', 'livros', 'books'],
+             urls: [/udemy\.com/, /coursera\.org/, /alura\.com/, /medium\.com/, /dev\.to/, /wikipedia\.org/] },
+  watch:   { folders: ['videos', 'video', 'filmes', 'movies', 'series', 'watch', 'assistir'],
+             urls: [/youtube\.com\/watch/, /youtu\.be\//, /vimeo\.com/, /netflix\.com/, /twitch\.tv/, /primevideo\.com/, /disneyplus\.com/] },
+  music:   { folders: ['music', 'musica', 'musicas', 'songs'],
+             urls: [/spotify\.com/, /soundcloud\.com/, /deezer\.com/, /bandcamp\.com/, /cifraclub\.com/, /ultimate-guitar\.com/] },
+  tools:   { folders: ['tools', 'ferramentas', 'utils', 'util', 'apps'], urls: [] },
+  code:    { folders: ['code', 'dev', 'repos', 'git', 'projetos', 'projects'],
+             urls: [/github\.com/, /gitlab\.com/, /bitbucket\.org/, /stackoverflow\.com/, /npmjs\.com/] },
+  ai:      { folders: ['ai', 'ia', 'llm', 'llms', 'gpt'],
+             urls: [/chatgpt\.com/, /openai\.com/, /claude\.ai/, /anthropic\.com/, /gemini\.google\.com/, /huggingface\.co/, /perplexity\.ai/] },
+  work:    { folders: ['work', 'trabalho', 'job', 'empresa', 'company'], urls: [] },
+  explore: { folders: ['explore', 'explorar', 'shopping', 'compras', 'games', 'gaming', 'jogos', 'finance', 'financas', 'design', 'hardware', 'news', 'noticias'], urls: [] },
 };
+
+// true quando a instalação foi semeada por uma versão anterior das regras.
+export function needsReSeed(meta) {
+  return !!(meta && meta.seeded) && (meta.version || 1) < SEED_VERSION;
+}
 
 export function slugify(text) {
   return String(text || '')
@@ -41,11 +59,18 @@ export function uniqueSectionId(baseSlug, existingIds) {
   return baseSlug + '-' + n;
 }
 
+function _normalize(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Match por token inteiro (insensível a caixa e acento), nunca substring:
+// keywords genéricas curtas dariam falso positivo ('ai' casaria com 'Email').
 function _folderMatches(folderList, ruleFolders) {
-  for (const rule of ruleFolders) {
-    const r = String(rule).toLowerCase();
-    for (const f of folderList) {
-      if (String(f || '').toLowerCase().indexOf(r) !== -1) return true;
+  for (const folder of folderList) {
+    const tokens = _normalize(folder).split(/[\s\-_/.]+/).filter(Boolean);
+    if (!tokens.length) continue;
+    for (const rule of ruleFolders) {
+      if (tokens.includes(_normalize(rule))) return true;
     }
   }
   return false;
@@ -93,7 +118,7 @@ export async function ensureSeeded(state, currentBookmarks, currentTree, persist
   for (const bm of currentBookmarks) {
     membership[bm.id] = seedCategorize(bm, SEED_RULES) || 'inbox';
   }
-  const meta = { version: 1, seeded: true };
+  const meta = { version: SEED_VERSION, seeded: true };
   await persist.sections(sections);
   await persist.membership(membership);
   await persist.meta(meta);

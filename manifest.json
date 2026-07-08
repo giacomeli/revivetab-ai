@@ -1,12 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Bookmark Dial",
-  "version": "3.1.0",
+  "version": "3.3.0",
   "description": "Speed dial dashboard for your bookmarks.",
   "permissions": [
     "bookmarks",
     "favicon",
-    "storage"
+    "storage",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://www.youtube-nocookie.com/*",
+    "https://api.deepseek.com/*",
+    "https://openrouter.ai/*"
   ],
   "chrome_url_overrides": {
     "newtab": "index.html"
