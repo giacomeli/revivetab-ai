@@ -21,6 +21,9 @@ body {
 .dial-wrap[draggable="true"] { cursor: grab; }
 .dial-wrap.bd-card-dragging  { opacity: 0.35; cursor: grabbing; }
 
+/* Drop-zone indicator: only renders while body has .bd-dragging. The
+   :not(.bd-dragging) reset below ensures that the moment we remove that
+   class, all indicators disappear — even if .bd-drop-target leaks. */
 body.bd-dragging .bd-group .bd-group-head {
   outline: 2px dashed rgba(255, 255, 255, 0.18);
   outline-offset: 4px;
@@ -33,6 +36,24 @@ body.bd-dragging .bd-group.bd-drop-target .bd-group-head {
 }
 body.bd-dragging .bd-empty-section {
   @apply border-primary/50 text-base-content/70;
+}
+
+/* Hard reset: if body does NOT have bd-dragging, force-clear all visual
+   drag indicators regardless of stale classes. */
+body:not(.bd-dragging) .bd-group-head {
+  outline: none !important;
+  background: transparent;
+}
+body:not(.bd-dragging) .bd-card-dragging {
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* Label focus: avoid showing the browser's default focus ring around the
+   editable title (it can be confused with the drag outline). */
+.bd-group-label:focus,
+.bd-group-label:focus-visible {
+  outline: none;
 }
 
 /* ============================================================

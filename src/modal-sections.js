@@ -1,9 +1,11 @@
 // modal-sections.js
-// Modal "Gerenciar seções" — CRUD of sections + re-seed + export backup.
+// Modal "Gerenciar seções" — abas: Seções (CRUD + re-seed + export) e IA
+// (organização automática, ver modal-ai.js).
 
 import { STATE } from './state.js';
 import { showModal, closeModal } from './modal.js';
 import { iconSVG, iconNames } from './icons.js';
+import { renderAiTab } from './modal-ai.js';
 import {
   saveSections, saveMembership, exportBackup,
 } from './storage.js';
@@ -36,20 +38,27 @@ export function openSectionsModal() {
           ${iconSVG('x', 16)}
         </button>
       </div>
-      <div class="px-6 py-4 overflow-auto flex-1 max-h-[60vh]">
-        <button class="btn btn-outline btn-block btn-sm mb-3 bd-add-section">
-          ${iconSVG('plus', 16)} Nova seção
-        </button>
-        <ul class="bd-section-list space-y-1.5"></ul>
+      <div class="tabs tabs-bordered px-6 pt-2" role="tablist">
+        <a class="tab tab-active bd-modal-tab" data-tab="sections" role="tab">Seções</a>
+        <a class="tab bd-modal-tab" data-tab="ai" role="tab">IA</a>
       </div>
-      <div class="px-6 py-3 border-t border-base-content/10 flex flex-wrap gap-2 justify-end">
-        <button class="btn btn-sm btn-ghost" id="bd-reseed">
-          ${iconSVG('shuffle', 14)} Recategorizar automaticamente
-        </button>
-        <button class="btn btn-sm btn-ghost" id="bd-export">
-          ${iconSVG('layers', 14)} Exportar backup
-        </button>
+      <div class="bd-tab-panel flex flex-col" data-panel="sections">
+        <div class="px-6 py-4 overflow-auto flex-1 max-h-[60vh]">
+          <button class="btn btn-outline btn-block btn-sm mb-3 bd-add-section">
+            ${iconSVG('plus', 16)} Nova seção
+          </button>
+          <ul class="bd-section-list space-y-1.5"></ul>
+        </div>
+        <div class="px-6 py-3 border-t border-base-content/10 flex flex-wrap gap-2 justify-end">
+          <button class="btn btn-sm btn-ghost" id="bd-reseed">
+            ${iconSVG('shuffle', 14)} Recategorizar automaticamente
+          </button>
+          <button class="btn btn-sm btn-ghost" id="bd-export">
+            ${iconSVG('layers', 14)} Exportar backup
+          </button>
+        </div>
       </div>
+      <div class="bd-tab-panel flex flex-col hidden" data-panel="ai"></div>
     </div>
   `;
 
@@ -62,7 +71,18 @@ export function openSectionsModal() {
   overlay.querySelector('#bd-reseed').addEventListener('click', _handleReSeed);
   overlay.querySelector('#bd-export').addEventListener('click', _handleExport);
 
+  overlay.querySelectorAll('.bd-modal-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      overlay.querySelectorAll('.bd-modal-tab').forEach((t) => t.classList.toggle('tab-active', t === tab));
+      overlay.querySelectorAll('.bd-tab-panel').forEach((p) => {
+        p.classList.toggle('hidden', p.getAttribute('data-panel') !== target);
+      });
+    });
+  });
+
   _renderSectionList();
+  renderAiTab(overlay.querySelector('.bd-tab-panel[data-panel="ai"]'));
 }
 
 function _renderSectionList() {

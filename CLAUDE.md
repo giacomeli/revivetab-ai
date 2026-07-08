@@ -2,137 +2,128 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Visão geral
 
-Chrome/Brave browser extension (Manifest V3) que substitui a new tab page por um speed dial customizável de bookmarks. Stack: **Vite + @crxjs/vite-plugin + TailwindCSS + daisyUI**, com testes em **Vitest**. Código em JavaScript (ES modules).
+Extensão para browsers Chromium (Manifest V3) que substitui a new tab page por um speed dial de bookmarks com seções customizáveis, busca, drag-and-drop, carousels infinitos e player de YouTube em modal. Stack: **Vite + @crxjs/vite-plugin + TailwindCSS + daisyUI**, testes em **Vitest**. JavaScript puro (ES modules), sem framework de UI. O código é genérico — nada nele pode acoplar a estrutura de pastas ou dados de um usuário específico.
 
-## Development Workflow
-
-### Comandos principais
+## Comandos
 
 ```bash
-npm install              # instala deps (primeira vez)
-npm run dev              # Vite dev server com HMR (na pasta dist/)
+npm run dev              # Vite dev server com HMR (escreve em dist/)
 npm run build            # build de produção -> dist/
-npm test                 # vitest run
+npm test                 # vitest run (suite completa)
 npm run test:watch       # vitest em watch
+npx vitest run -t "slugify"   # rodar um teste específico por nome
 ```
 
-### Carregar a extensão no Brave/Chrome
+### Carregar a extensão no browser
 
-Sempre carregue a pasta **`dist/`** (output do build), não a raiz:
+Sempre carregar a pasta **`dist/`** (output do build), nunca a raiz:
 
 1. `npm run build` (ou `npm run dev` para iterar)
-2. `brave://extensions` (ou `chrome://extensions`)
-3. Developer Mode ligado
-4. "Load unpacked" → selecione a pasta **`dist/`**
-5. Para iterar: rodar `npm run dev`, clicar Reload na extensão, abrir new tab.
-
-`npm run dev` mantém um watch que reescreve `dist/` em cada mudança — basta clicar Reload na extensão.
+2. `brave://extensions` (ou `chrome://extensions`), Developer Mode ligado
+3. "Load unpacked" apontando para `dist/`
+4. Para iterar: manter `npm run dev` rodando, clicar Reload na extensão, abrir new tab
 
 ### Versão
 
-Atualizar `version` em `manifest.json` (também sai no build).
+Manter `version` sincronizada em `manifest.json` e `package.json`.
 
-## Architecture
+## Arquitetura
 
-### Estrutura de arquivos
+### Módulos (src/)
 
-```
-bookmark-dial/
-├── package.json              # deps + scripts
-├── vite.config.js            # config Vite + @crxjs
-├── tailwind.config.js        # tema daisyUI custom 'bookmark-dial'
-├── postcss.config.js         # tailwindcss + autoprefixer
-├── manifest.json             # Manifest V3 (chrome_url_overrides aponta para index.html)
-├── index.html                # entry HTML (carrega /src/main.js)
-├── src/
-│   ├── main.js               # entry point: importa styles, chama init/wireEvents
-│   ├── state.js              # STATE compartilhado entre módulos + dbg()
-│   ├── icons.js              # LUCIDE_ICONS (40 SVGs embutidos) + iconSVG()
-│   ├── storage.js            # wrapper chrome.storage.local (BD_KEYS, load/save)
-│   ├── sections.js           # DEFAULT_SECTIONS, SEED_RULES, slugify, seedCategorize, reconcileMembership, ensureSeeded, reSeedAll
-│   ├── modal.js              # showModal/closeModal helpers (daisyUI modal)
-│   ├── bookmark-ops.js       # editBookmark/deleteBookmark modais
-│   ├── modal-sections.js     # modal "Gerenciar seções" completo
-│   ├── dnd.js                # drag-and-drop entre seções
-│   ├── dial.js               # walk, render, carousel, search, init, listeners
-│   └── styles.css            # @tailwind + custom mínimo (DnD outlines, gradient bg)
-├── test/
-│   └── sections.test.js      # Vitest — funções puras
-├── icons/
-│   └── icon128.png           # ícone da extensão
-└── dist/                     # output do build (gitignored)
-```
+| Módulo | Responsabilidade |
+| --- | --- |
+| `main.js` | Entry point: importa styles, chama `setupBraveFooterHiding`, `wireEvents`, `init` |
+| `state.js` | `STATE` mutável compartilhado + `dbg()` + instrumentação de performance (`timed`, `timedAsync`, `tstamp`) |
+| `storage.js` | Wrapper de `chrome.storage.local` (`BD_KEYS`, load/save, export backup) |
+| `sections.js` | `DEFAULT_SECTIONS`, `SEED_RULES` genérico, `SEED_VERSION`, funções puras de categorização (`seedCategorize`, `reconcileMembership`, `ensureSeeded`, `reSeedAll`, `needsReSeed`, `slugify`) |
+| `tree.js` | Módulo puro: `walk` e `collectBookmarks` (árvore do browser -> lista flat) |
+| `yt.js` | Módulo puro: `ytId(url)` — detecção de vídeo do YouTube |
+| `dial.js` | O maior módulo: `renderAll`, carousel infinito, busca, lazy-load de thumbs, listeners do Chrome, `init` |
+| `dnd.js` | Drag-and-drop de cards entre seções (HTML5 DnD) |
+| `modal.js` | `showModal`/`closeModal` genéricos (daisyUI modal; `options.boxClass` customiza o box) |
+| `video-modal.js` | Player de YouTube embutido (`openVideoModal` + regra DNR de Referer) |
+| `ai-client.js` | Cliente OpenAI-compatible (DeepSeek/OpenRouter): payload/parse puros + fetch |
+| `ai-organize.js` | Orquestração da classificação por IA: chunking, retry, cancelamento, diff da prévia |
+| `modal-ai.js` | Aba "IA" do modal: config (provider/key/modelo), execução, prévia, desfazer |
+| `modal-sections.js` | Modal "Gerenciar seções": CRUD, reorder, re-seed, export backup |
+| `bookmark-ops.js` | Modais de editar título / excluir bookmark |
+| `icons.js` | SVGs Lucide embutidos + `iconSVG(name, size)` |
+
+### Leitura da árvore (tree.js)
+
+`collectBookmarks(tree)` itera os filhos do nó raiz — os containers especiais do browser (barra de favoritos, outros favoritos, mobile), detectados **por posição, nunca por título** (títulos são localizados e variam entre browsers Chromium). Os nomes dos containers e o título do próprio bookmark **não entram** no `folderList` (nem no breadcrumb, nem no matching do seed). Favorito direto em um container fica com `folderList` vazio ("solto") e só é elegível às regras de URL.
 
 ### Categorização — modelo "tags + override manual"
 
-A categorização **não é determinada pela árvore de pastas a cada load**. Em vez disso:
+A categorização **não é derivada da árvore de pastas a cada load**:
 
-1. **Primeira instalação**: roda `seedCategorize()` em todos os bookmarks. Match por pasta tem prioridade sobre match por URL. Resultado salvo em `bd:membership`. Backup completo da árvore vai para `bd:initial-backup`.
-2. **Loads seguintes**: lê `bd:membership` (fonte de verdade) e renderiza. Reconciliação só adiciona bookmarks novos (no Inbox) e remove os que sumiram do Brave.
-3. **Drag-and-drop** atualiza `STATE.membership` e persiste.
+1. **Primeira instalação**: `ensureSeeded()` roda `seedCategorize()` em todos os bookmarks (match por pasta tem prioridade sobre match por URL). Resultado salvo em `bd:membership`; backup completo da árvore vai para `bd:initial-backup` antes.
+2. **Loads seguintes**: `bd:membership` é a fonte de verdade. `reconcileMembership()` só adiciona bookmarks novos (no Inbox) e remove os que sumiram do browser.
+3. **Drag-and-drop** atualiza `STATE.membership` e persiste — nunca mexe nas pastas do browser.
 
-### Storage schema
+`SEED_RULES` é **genérico por contrato**: só keywords universais de nome de pasta (pt/en) e regexes de domínios amplamente conhecidos — nunca nomes de pastas pessoais. O match de pasta é por **token inteiro** (insensível a caixa e acento, separadores espaço/`-`/`_`/`/`/`.`), nunca substring — `ai` não casa com `Email`. Ao alterar as regras de forma que mude o resultado da semeadura, **incrementar `SEED_VERSION`**: instalações existentes re-semeiam automaticamente no próximo load (`needsReSeed()` em `init()`), sem tocar em `bd:sections` nem `bd:initial-backup`.
+
+### Storage schema (chrome.storage.local)
 
 | Chave | Conteúdo |
 | --- | --- |
 | `bd:sections` | `[{ id, label, icon, color, order, builtin? }]` ordenado por `order` |
 | `bd:membership` | `{ [bookmarkId]: sectionId }` — fonte de verdade da categorização |
-| `bd:meta` | `{ version, seeded }` |
+| `bd:meta` | `{ version, seeded }` — `version` acompanha `SEED_VERSION` (atual: 2) |
 | `bd:initial-backup` | `{ savedAt, tree }` — snapshot antes da primeira semeadura |
+| `bd:ai` | `{ provider, apiKeys: { deepseek, openrouter }, model }` — config da IA (key local, nunca em código/logs) |
+| `bd:membership-undo` | `{ savedAt, membership }` — snapshot para desfazer a última organização por IA |
 
-### State global (src/state.js)
+### State global e wiring de renderer
 
-`STATE` é o único container mutável compartilhado:
+`STATE` (em `state.js`) é o único container mutável compartilhado: `{ sections, membership, meta, all }`. Não existe `window.STATE`.
 
-```js
-{ sections: [], membership: {}, meta: null, all: [] }
-```
+Módulos que precisam disparar re-render (`dnd.js`, `modal-sections.js`, `bookmark-ops.js`) recebem `renderAll` via `registerRenderer()` chamado em `init()` — evita import circular com `dial.js`.
 
-Todos os módulos importam `STATE` desse arquivo. Não há `window.STATE` nem variáveis globais soltas.
+### Render e performance
 
-### Renderer wiring
+`renderAll()` reconstrói `#app` inteiro via `innerHTML` (sem virtual DOM). Pontos de performance deliberados — manter ao mexer no render:
 
-Cada módulo que precisa disparar re-render registra a função `renderAll` via `registerRenderer()`:
+- **`MAX_PER_SECTION = 50`** (`dial.js`): seções acima disso mostram 50 cards aleatórios (shuffle + slice) com badge `total/50`; o restante continua acessível pela busca. Principal knob de perf.
+- **Larguras fixas de card**: `CARD_WIDTH_PX`/`CARD_GAP_PX` em `dial.js` precisam bater com as classes `w-[170px] min-w-[170px]` no template de `cardHTML` e com o override responsivo em `styles.css`. A matemática do carousel depende disso para não ler `offsetWidth` por card.
+- **Thumbs lazy**: `IntersectionObserver` sobre `.bd-lazy-thumb[data-src]`, com fallback favicon -> inicial da letra.
+- **Carousel infinito**: clones (`.bd-carousel-clone`) pré/pós via DocumentFragment + scroll-jump nas bordas. Clones têm `draggable="false"` e perdem os botões de ação.
+- **Instrumentação**: logs com prefixos `[BD]`, `[BD-PERF]`, `[BD-RENDER]`, `[BD-DND]` — filtrar por prefixo no console ao debugar. `timed()`/`timedAsync()` marcam `SLOW` acima de 50ms.
 
-- `dnd.js` → `registerRenderer(renderAll)` — para depois de drop
-- `modal-sections.js` → idem — para depois de CRUD de seções
-- `bookmark-ops.js` → idem — para depois de delete
+### Drag-and-drop (dnd.js)
 
-Evita import circular (eles não importam `dial.js` diretamente).
+Estado visual controlado por classes: `body.bd-dragging` (gate global), `.bd-card-dragging`, `.bd-drop-target`. O CSS em `styles.css` só renderiza indicadores enquanto `body.bd-dragging` existe, com hard reset em `body:not(.bd-dragging)` — proteção contra classes vazadas. `cleanupDragState()` é chamado defensivamente em dragend/drop/mouseup/pointerup/blur/Escape e no início de todo `renderAll()`. Ao mexer em DnD, preservar essas camadas de cleanup.
 
-### Styling
+### Player de YouTube (video-modal.js)
 
-- **TailwindCSS** + **daisyUI** com tema custom `bookmark-dial` (dark, gradient índigo/roxo herdando a paleta original).
-- Components principais usam classes daisyUI: `btn`, `btn-primary`, `btn-ghost`, `input`, `input-bordered`, `modal`, `modal-box`, `modal-action`, `modal-backdrop`, `tooltip`.
-- CSS custom em `src/styles.css` cobre apenas: gradient de background, drag-and-drop visuals (outline tracejado/sólido nas drop zones), responsive breakpoint do carousel.
-- Tema configurado em `tailwind.config.js` em `daisyui.themes` — para mudar cores das seções padrão ou da UI, editar lá.
+Clique em card cujo URL tem vídeo identificável por `ytId()` abre `openVideoModal()` — iframe `youtube.com/embed` com autoplay em modal — em vez de navegar. Escape/backdrop fecham (a remoção do iframe para a reprodução); o link "Abrir no YouTube" é a saída para vídeos com embed desabilitado. Cards não-YouTube navegam direto.
+
+O YouTube exige o header `Referer` no player embutido (Error 153 sem ele) e o Chrome não envia `Referer` de páginas `chrome-extension://` — `referrerpolicy` no iframe não resolve. Por isso `video-modal.js` registra uma regra DNR de sessão (antes do primeiro embed) que injeta o header apenas em `sub_frame` iniciados pela extensão; o manifest precisa de `declarativeNetRequestWithHostAccess` + `host_permissions` dos domínios do YouTube. O **valor** do Referer deve ser `chrome.runtime.id` — outros valores (ex.: `https://www.youtube.com/`) produzem Error 152 "video unavailable". Não remover essas permissões nem mudar o valor sem retestar o player.
+
+### Organização por IA (ai-client.js, ai-organize.js, modal-ai.js)
+
+Aba "IA" no modal Gerenciar seções. DeepSeek e OpenRouter são OpenAI-compatible — um único cliente com base URL/headers por provider (`PROVIDERS` em `ai-client.js`); `host_permissions` no manifest cobrem os dois domínios. A classificação roda em lotes sequenciais de 80 (`BATCH_SIZE`), com retry 1x por lote, cancelamento via `AbortController` e escopo Inbox/todos. O resultado **sempre** passa por prévia (diff via `computePreview`) antes de gravar `bd:membership`; aplicar salva snapshot em `bd:membership-undo` (botão Desfazer). A IA usa apenas seções existentes — resposta com seção desconhecida cai no Inbox (`parseAssignments`). Payload/parse/chunk/diff são funções puras testadas em `test/ai.test.js`; a orquestração recebe `classifyFn` injetada, então nada disso exige mock de `fetch`.
+
+### Listeners do Chrome bookmarks (dial.js)
+
+- `onRemoved` -> remove de membership + re-render
+- `onCreated` -> adiciona ao Inbox + re-render
+- `onChanged` -> atualiza título/URL in-place (sem re-render completo)
+- `onMoved` -> ignorado (membership é independente de pastas)
 
 ### Princípio de segurança
 
-`chrome.bookmarks` é **read-only por padrão**. As únicas operações de escrita são:
+`chrome.bookmarks` é **read-only por padrão**. As únicas escritas são `chrome.bookmarks.update(id, {title})` (botão lápis) e `chrome.bookmarks.remove(id)` (botão X), ambas em `bookmark-ops.js`. Mover cards entre seções nunca altera a estrutura de pastas do browser. Backup automático em `bd:initial-backup`; backup manual via "Exportar backup" no modal de seções.
 
-- `chrome.bookmarks.update(id, {title})` — botão lápis no card.
-- `chrome.bookmarks.remove(id)` — botão X no card.
+### Styling
 
-Movimentar cards entre seções no Dial **não altera** a estrutura de pastas do browser — só mexe em `bd:membership`. Backup automático em `bd:initial-backup` antes da primeira modificação. Backup manual via "Exportar backup" no modal.
-
-### Listeners do Chrome bookmarks
-
-Configurados em `setupBookmarkListeners()` em `src/dial.js`:
-
-- `onRemoved` → remove de membership + re-render.
-- `onCreated` → adiciona ao Inbox + re-render.
-- `onChanged` → atualiza título in-place.
-- `onMoved` → ignorado (membership é independente de pastas).
+- Tema daisyUI custom `bookmark-dial` (dark, gradient índigo/roxo) definido em `tailwind.config.js` — cores da UI mudam lá.
+- CSS custom em `src/styles.css` cobre só: gradient de fundo, visuais de DnD e breakpoint responsivo do carousel. O resto é utility class no template.
+- **Classes prefixadas `bd-` e `dial-` são seletores estruturais usados pelo JS** (DnD, busca, lazy-load, rename inline). Não remover/renomear sem buscar referências em JS. Exemplos: `.dial-wrap`, `.dial-title`, `.bd-group`, `.bd-group-head`, `.bd-group-label`, `.bd-carousel`, `.bd-carousel-track`, `.bd-carousel-clone`, `.bd-lazy-thumb`, `.bd-modal-overlay`. Classes Tailwind/daisyUI são puramente estilo e podem ser editadas livremente.
 
 ### Testes
 
-`npm test` roda Vitest sobre `test/sections.test.js`. Cobre `slugify`, `uniqueSectionId`, `seedCategorize`, `reconcileMembership` — funções puras de `src/sections.js`. UI/DOM é verificada manualmente carregando a extensão.
-
-### Padrões de classe CSS
-
-Classes prefixadas com `bd-` são **seletores estruturais** usados pelo JS (DnD, search). Não as remova nem renomeie sem buscar referências em JS. Exemplos: `.dial-wrap`, `.bd-group`, `.bd-group-head`, `.bd-group-label`, `.bd-carousel`, `.bd-carousel-track`, `.bd-carousel-clone`, `.bd-modal-overlay`, `.bd-section-list`, `.bd-section-row`.
-
-Outras classes (Tailwind utilities, daisyUI components) são puramente estilo e podem ser editadas livremente.
+`npm test` roda `test/sections.test.js`: cobre `slugify`, `uniqueSectionId`, `seedCategorize`, `reconcileMembership` — as funções puras de `sections.js`. UI/DOM é verificada manualmente carregando a extensão (não há ambiente de teste com `chrome.*` mockado).

@@ -1,6 +1,6 @@
 {
   "name": "bookmark-dial",
-  "version": "3.1.0",
+  "version": "3.3.0",
   "description": "Speed dial dashboard for your bookmarks.",
   "type": "module",
   "private": true,
