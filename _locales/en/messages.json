@@ -1,0 +1,154 @@
+{
+  "appName": { "message": "ReviveTab AI: Bookmarks & Speed Dial" },
+  "appShortName": { "message": "ReviveTab AI" },
+  "appDesc": { "message": "Turn forgotten bookmarks into a smart AI Speed Dial. Organize, shuffle, and revisit your links on every new tab." },
+
+  "cancel": { "message": "Cancel" },
+  "save": { "message": "Save" },
+  "close": { "message": "Close" },
+  "edit": { "message": "Edit" },
+  "delete": { "message": "Delete" },
+  "apply": { "message": "Apply" },
+  "discard": { "message": "Discard" },
+  "create": { "message": "Create" },
+  "show": { "message": "Show" },
+  "hide": { "message": "Hide" },
+  "shuffle": { "message": "Shuffle" },
+  "untitled": { "message": "(untitled)" },
+
+  "searchPlaceholder": { "message": "Search bookmarks..." },
+  "manageSections": { "message": "Manage sections" },
+
+  "loadingBookmarks": { "message": "Loading bookmarks..." },
+  "noSections": { "message": "No sections configured." },
+  "searchNoResults": {
+    "message": "Nothing found for \"$QUERY$\"",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "emptySectionHint": { "message": "Drag a card here" },
+  "cappedBadgeTitle": {
+    "message": "Total $TOTAL$ — showing $SHOWN$ at random (click Shuffle for others, use search to find specific ones)",
+    "placeholders": { "total": { "content": "$1" }, "shown": { "content": "$2" } }
+  },
+  "renameSectionHint": { "message": "Click to rename" },
+  "editTitleTooltip": { "message": "Edit title" },
+  "deleteBookmark": { "message": "Delete bookmark" },
+  "loadErrorTitle": { "message": "Failed to load bookmarks." },
+  "loadErrorHint": { "message": "Check permissions at brave://extensions" },
+
+  "openOnYouTube": { "message": "Open on YouTube" },
+
+  "editBookmarkHeading": { "message": "Edit bookmark" },
+  "deleteConfirmQuestion": {
+    "message": "Are you sure you want to delete $TITLE$?",
+    "placeholders": { "title": { "content": "$1" } }
+  },
+  "deleteConfirmWarning": { "message": "This permanently removes the bookmark from your browser." },
+
+  "tabSections": { "message": "Sections" },
+  "tabAi": { "message": "AI" },
+  "newSection": { "message": "New section" },
+  "reseedAuto": { "message": "Re-categorize automatically" },
+  "exportBackup": { "message": "Export backup" },
+  "builtinSection": { "message": "Built-in section" },
+  "dragToReorder": { "message": "Drag to reorder" },
+  "formName": { "message": "Name" },
+  "formIcon": { "message": "Icon" },
+  "formColor": { "message": "Color" },
+  "deleteSectionConfirmWithCount": {
+    "message": "Delete \"$LABEL$\"? The $COUNT$ bookmark(s) here will be moved to \"Uncategorized\".",
+    "placeholders": { "label": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "deleteSectionConfirm": {
+    "message": "Delete \"$LABEL$\"?",
+    "placeholders": { "label": { "content": "$1" } }
+  },
+  "reseedConfirm": { "message": "Re-categorize everything automatically?\n\nThis will erase ALL manual moves you have made. Custom sections are preserved, but their bookmarks go back to \"Uncategorized\" (unless they match an automatic rule of the default sections).\n\nConsider exporting a backup first." },
+  "reseedDone": { "message": "Categorization updated." },
+  "exportError": {
+    "message": "Export failed: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "aiProvider": { "message": "Provider" },
+  "aiModel": { "message": "Model" },
+  "aiModelPlaceholder": { "message": "e.g. deepseek-v4-flash" },
+  "aiApiKeyLabel": { "message": "Provider API key" },
+  "aiTestConnection": { "message": "Test connection" },
+  "aiTesting": { "message": "Testing..." },
+  "aiConnectionOk": {
+    "message": "Connection ok — $COUNT$ models available.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiScopeInbox": { "message": "Only uncategorized" },
+  "aiScopeAll": { "message": "All bookmarks" },
+  "aiUndoLast": { "message": "Undo last organization" },
+  "aiOrganize": { "message": "Organize with AI" },
+  "aiPreparing": { "message": "Preparing..." },
+  "aiConfigureKeyFirst": { "message": "Set your API key before organizing." },
+  "aiChooseModelFirst": { "message": "Choose a model before organizing." },
+  "aiNoBookmarksInScope": { "message": "No bookmarks in the selected scope." },
+  "aiClassifying": {
+    "message": "Classifying $COUNT$ bookmarks...",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiBatchProgress": {
+    "message": "Batch $DONE$ of $TOTAL$ — $COUNT$ classified",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" }, "count": { "content": "$3" } }
+  },
+  "aiBatchFailedSuffix": {
+    "message": "($COUNT$ failed)",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiPreviewTitle": { "message": "Organization preview" },
+  "aiPreviewCancelled": { "message": "Run cancelled — partial preview of what was already classified." },
+  "aiPreviewFailed": {
+    "message": "$COUNT$ bookmarks were left out (failed batches).",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiPreviewNoChanges": { "message": "No changes suggested — everything is already in the section the model picked." },
+  "aiPreviewSummary": {
+    "message": "$TOTAL$ bookmarks classified, $CHANGES$ changes:",
+    "placeholders": { "total": { "content": "$1" }, "changes": { "content": "$2" } }
+  },
+  "aiApplied": { "message": "Organization applied." },
+  "aiUndone": { "message": "Organization undone." },
+
+  "aiErrorInvalidKey": {
+    "message": "Invalid API key or missing permission on $PROVIDER$. Check the key in the AI tab.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorNoCredits": {
+    "message": "No credits left on $PROVIDER$.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorRateLimit": {
+    "message": "$PROVIDER$ rate limit reached. Wait a bit and try again.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorHttp": {
+    "message": "HTTP $STATUS$ error from the $PROVIDER$ API.",
+    "placeholders": { "status": { "content": "$1" }, "provider": { "content": "$2" } }
+  },
+  "aiErrorNetwork": {
+    "message": "Network failure calling $PROVIDER$. Check your connection.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorResponseNotJSON": { "message": "Model response is not valid JSON" },
+  "aiErrorMissingAssignments": { "message": "Model response is missing the \"assignments\" field" },
+  "aiErrorEmptyResponse": { "message": "Empty response from the model" },
+  "aiErrorUnknownProvider": {
+    "message": "Unknown provider: $PROVIDER$",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+
+  "sectionStudy": { "message": "What to study today" },
+  "sectionWatch": { "message": "What to watch today" },
+  "sectionMusic": { "message": "Practice music" },
+  "sectionTools": { "message": "Tools" },
+  "sectionCode": { "message": "Repos & Code" },
+  "sectionAi": { "message": "AI & LLMs" },
+  "sectionWork": { "message": "Work" },
+  "sectionExplore": { "message": "Explore" },
+  "sectionInbox": { "message": "Uncategorized" }
+}

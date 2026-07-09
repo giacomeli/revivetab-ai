@@ -1,25 +1,26 @@
-// dnd.js
-// HTML5 Drag-and-Drop handlers for moving bookmark cards between sections.
+// ui/dnd.ts
+// Drag-and-drop HTML5 para mover cards de bookmark entre seções.
 
-import { STATE, tstamp } from './state.js';
-import { saveMembership } from './storage.js';
+import { STATE, tstamp } from '../state';
+import { saveMembership } from '../data/storage';
 
-let _renderAll = null;
-export function registerRenderer(fn) { _renderAll = fn; }
+type RenderFn = () => void;
+let _renderAll: RenderFn | null = null;
+export function registerRenderer(fn: RenderFn): void { _renderAll = fn; }
 
 let _globalsWired = false;
 let _dragSeq = 0;
-let _currentDragId = null;
+let _currentDragId: string | null = null;
 let _dragStartTime = 0;
 
-const DND_LOG = true; // toggle off in production if too noisy
-function log(...args) { if (DND_LOG) console.log('[BD-DND]', tstamp(), ...args); }
-function bodyClasses() { return Array.from(document.body.classList).join(' ') || '(none)'; }
+const DND_LOG = true; // desligar em produção se ficar ruidoso
+function log(...args: unknown[]): void { if (DND_LOG) console.log('[BD-DND]', tstamp(), ...args); }
+function bodyClasses(): string { return Array.from(document.body.classList).join(' ') || '(none)'; }
 
-export function setupDragAndDrop() {
+export function setupDragAndDrop(): void {
   const start = performance.now();
   _wireGlobalsOnce();
-  const cards = document.querySelectorAll('.dial-wrap');
+  const cards = document.querySelectorAll<HTMLElement>('.dial-wrap');
   let real = 0, clones = 0;
   for (const card of cards) {
     if (card.classList.contains('bd-carousel-clone')) {
@@ -31,14 +32,14 @@ export function setupDragAndDrop() {
       real++;
     }
   }
-  const zones = document.querySelectorAll('.bd-group-head, .bd-carousel');
+  const zones = document.querySelectorAll<HTMLElement>('.bd-group-head, .bd-carousel');
   for (const zone of zones) _wireZone(zone);
   const dur = (performance.now() - start).toFixed(1);
   log('setupDragAndDrop wired', { realCards: real, clones, zones: zones.length, durMs: dur });
 }
 
-// cleanupDragState — removes ALL drag-related classes from the document.
-export function cleanupDragState(reason) {
+// cleanupDragState — remove TODAS as classes de drag do documento.
+export function cleanupDragState(reason?: string): void {
   const had = {
     bodyDragging: document.body.classList.contains('bd-dragging'),
     cardDragging: document.querySelectorAll('.bd-card-dragging').length,
@@ -54,18 +55,18 @@ export function cleanupDragState(reason) {
   }
 }
 
-function _wireGlobalsOnce() {
+function _wireGlobalsOnce(): void {
   if (_globalsWired) return;
   _globalsWired = true;
   log('wiring global listeners');
 
   document.addEventListener('dragend', (e) => {
-    log('doc:dragend (capture)', { target: e.target?.tagName, body: bodyClasses() });
+    log('doc:dragend (capture)', { target: (e.target as Element | null)?.tagName, body: bodyClasses() });
     cleanupDragState('doc:dragend');
   }, true);
 
   document.addEventListener('drop', (e) => {
-    log('doc:drop (capture)', { target: e.target?.tagName, body: bodyClasses() });
+    log('doc:drop (capture)', { target: (e.target as Element | null)?.tagName, body: bodyClasses() });
     cleanupDragState('doc:drop');
   }, true);
 
@@ -98,7 +99,7 @@ function _wireGlobalsOnce() {
   });
 }
 
-function _wireCard(card) {
+function _wireCard(card: HTMLElement): void {
   card.addEventListener('dragstart', (e) => {
     const bmId = _bookmarkIdFromCard(card);
     if (!bmId) {
@@ -109,9 +110,12 @@ function _wireCard(card) {
     _dragSeq++;
     _currentDragId = bmId;
     _dragStartTime = performance.now();
-    log('dragstart', { seq: _dragSeq, bmId, srcSection: card.closest('.bd-group')?.dataset.sectionId });
-    e.dataTransfer.setData('text/plain', bmId);
-    e.dataTransfer.effectAllowed = 'move';
+    log('dragstart', { seq: _dragSeq, bmId, srcSection: (card.closest('.bd-group') as HTMLElement | null)?.dataset.sectionId });
+    const dt = e.dataTransfer;
+    if (dt) {
+      dt.setData('text/plain', bmId);
+      dt.effectAllowed = 'move';
+    }
     document.body.classList.add('bd-dragging');
     card.classList.add('bd-card-dragging');
   });
@@ -124,7 +128,7 @@ function _wireCard(card) {
   });
 }
 
-function _wireZone(zone) {
+function _wireZone(zone: HTMLElement): void {
   const group = zone.closest('.bd-group');
   if (!group) return;
   const sectionId = group.getAttribute('data-section-id');
@@ -133,21 +137,21 @@ function _wireZone(zone) {
   zone.addEventListener('dragover', (e) => {
     if (!document.body.classList.contains('bd-dragging')) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
     if (!group.classList.contains('bd-drop-target')) {
       log('dragenter zone', { sectionId, zoneKind });
     }
     group.classList.add('bd-drop-target');
   });
   zone.addEventListener('dragleave', (e) => {
-    if (!group.contains(e.relatedTarget)) {
+    if (!group.contains(e.relatedTarget as Node | null)) {
       log('dragleave zone', { sectionId, zoneKind });
       group.classList.remove('bd-drop-target');
     }
   });
   zone.addEventListener('drop', (e) => {
     e.preventDefault();
-    const bmId = e.dataTransfer.getData('text/plain');
+    const bmId = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
     const destSectionId = group.getAttribute('data-section-id');
     log('drop on zone', { destSectionId, zoneKind, bmId, body: bodyClasses() });
     cleanupDragState('zone:drop');
@@ -159,14 +163,14 @@ function _wireZone(zone) {
   });
 }
 
-function _bookmarkIdFromCard(card) {
+function _bookmarkIdFromCard(card: HTMLElement): string | null {
   const directId = card.getAttribute('data-bm-id');
   if (directId) return directId;
   const titleEl = card.querySelector('.dial-title[data-bmid]');
   return titleEl ? titleEl.getAttribute('data-bmid') : null;
 }
 
-export async function moveBookmark(bmId, destSectionId) {
+export async function moveBookmark(bmId: string, destSectionId: string): Promise<void> {
   const currentSection = STATE.membership ? STATE.membership[bmId] : null;
   if (!STATE.membership || currentSection === destSectionId) {
     log('moveBookmark NO-OP (same section)', { bmId, currentSection, destSectionId, body: bodyClasses() });

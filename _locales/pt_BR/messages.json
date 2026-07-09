@@ -1,0 +1,154 @@
+{
+  "appName": { "message": "ReviveTab AI: Bookmarks & Speed Dial" },
+  "appShortName": { "message": "ReviveTab AI" },
+  "appDesc": { "message": "Transforme favoritos esquecidos em um Speed Dial inteligente com IA. Organize, use o shuffle e revisite links a cada nova guia." },
+
+  "cancel": { "message": "Cancelar" },
+  "save": { "message": "Salvar" },
+  "close": { "message": "Fechar" },
+  "edit": { "message": "Editar" },
+  "delete": { "message": "Excluir" },
+  "apply": { "message": "Aplicar" },
+  "discard": { "message": "Descartar" },
+  "create": { "message": "Criar" },
+  "show": { "message": "Mostrar" },
+  "hide": { "message": "Ocultar" },
+  "shuffle": { "message": "Shuffle" },
+  "untitled": { "message": "(sem título)" },
+
+  "searchPlaceholder": { "message": "Buscar favoritos..." },
+  "manageSections": { "message": "Gerenciar seções" },
+
+  "loadingBookmarks": { "message": "Carregando favoritos..." },
+  "noSections": { "message": "Nenhuma seção configurada." },
+  "searchNoResults": {
+    "message": "Nada encontrado para \"$QUERY$\"",
+    "placeholders": { "query": { "content": "$1" } }
+  },
+  "emptySectionHint": { "message": "Arraste um card aqui" },
+  "cappedBadgeTitle": {
+    "message": "Total $TOTAL$ — mostrando $SHOWN$ aleatórios (clique Shuffle para outros, use a busca para encontrar específicos)",
+    "placeholders": { "total": { "content": "$1" }, "shown": { "content": "$2" } }
+  },
+  "renameSectionHint": { "message": "Clique para renomear" },
+  "editTitleTooltip": { "message": "Editar título" },
+  "deleteBookmark": { "message": "Excluir favorito" },
+  "loadErrorTitle": { "message": "Erro ao carregar bookmarks." },
+  "loadErrorHint": { "message": "Verifique permissões em brave://extensions" },
+
+  "openOnYouTube": { "message": "Abrir no YouTube" },
+
+  "editBookmarkHeading": { "message": "Editar favorito" },
+  "deleteConfirmQuestion": {
+    "message": "Tem certeza que deseja excluir $TITLE$?",
+    "placeholders": { "title": { "content": "$1" } }
+  },
+  "deleteConfirmWarning": { "message": "Isso vai remover o favorito permanentemente do browser." },
+
+  "tabSections": { "message": "Seções" },
+  "tabAi": { "message": "IA" },
+  "newSection": { "message": "Nova seção" },
+  "reseedAuto": { "message": "Recategorizar automaticamente" },
+  "exportBackup": { "message": "Exportar backup" },
+  "builtinSection": { "message": "Seção fixa" },
+  "dragToReorder": { "message": "Arrastar para reordenar" },
+  "formName": { "message": "Nome" },
+  "formIcon": { "message": "Ícone" },
+  "formColor": { "message": "Cor" },
+  "deleteSectionConfirmWithCount": {
+    "message": "Excluir \"$LABEL$\"? Os $COUNT$ bookmark(s) que estão aqui serão movidos para \"Não categorizado\".",
+    "placeholders": { "label": { "content": "$1" }, "count": { "content": "$2" } }
+  },
+  "deleteSectionConfirm": {
+    "message": "Excluir \"$LABEL$\"?",
+    "placeholders": { "label": { "content": "$1" } }
+  },
+  "reseedConfirm": { "message": "Recategorizar tudo automaticamente?\n\nIsso vai apagar TODAS as movimentações manuais que você fez. As seções customizadas serão preservadas, mas os bookmarks delas voltam para \"Não categorizado\" (a menos que casem com uma regra automática das seções padrão).\n\nConsidere exportar um backup antes." },
+  "reseedDone": { "message": "Categorização atualizada." },
+  "exportError": {
+    "message": "Erro ao exportar: $MSG$",
+    "placeholders": { "msg": { "content": "$1" } }
+  },
+
+  "aiProvider": { "message": "Provider" },
+  "aiModel": { "message": "Modelo" },
+  "aiModelPlaceholder": { "message": "ex: deepseek-v4-flash" },
+  "aiApiKeyLabel": { "message": "API key do provider" },
+  "aiTestConnection": { "message": "Testar conexão" },
+  "aiTesting": { "message": "Testando..." },
+  "aiConnectionOk": {
+    "message": "Conexão ok — $COUNT$ modelos disponíveis.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiScopeInbox": { "message": "Só não categorizados" },
+  "aiScopeAll": { "message": "Todos os bookmarks" },
+  "aiUndoLast": { "message": "Desfazer última organização" },
+  "aiOrganize": { "message": "Organizar com IA" },
+  "aiPreparing": { "message": "Preparando..." },
+  "aiConfigureKeyFirst": { "message": "Configure a API key antes de organizar." },
+  "aiChooseModelFirst": { "message": "Escolha um modelo antes de organizar." },
+  "aiNoBookmarksInScope": { "message": "Nenhum bookmark no escopo selecionado." },
+  "aiClassifying": {
+    "message": "Classificando $COUNT$ bookmarks...",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiBatchProgress": {
+    "message": "Lote $DONE$ de $TOTAL$ — $COUNT$ classificados",
+    "placeholders": { "done": { "content": "$1" }, "total": { "content": "$2" }, "count": { "content": "$3" } }
+  },
+  "aiBatchFailedSuffix": {
+    "message": "($COUNT$ com falha)",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiPreviewTitle": { "message": "Prévia da organização" },
+  "aiPreviewCancelled": { "message": "Execução cancelada — prévia parcial do que já foi classificado." },
+  "aiPreviewFailed": {
+    "message": "$COUNT$ bookmarks ficaram de fora (lotes com falha).",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "aiPreviewNoChanges": { "message": "Nenhuma mudança sugerida — tudo já está na seção indicada pelo modelo." },
+  "aiPreviewSummary": {
+    "message": "$TOTAL$ bookmarks classificados, $CHANGES$ mudanças:",
+    "placeholders": { "total": { "content": "$1" }, "changes": { "content": "$2" } }
+  },
+  "aiApplied": { "message": "Organização aplicada." },
+  "aiUndone": { "message": "Organização desfeita." },
+
+  "aiErrorInvalidKey": {
+    "message": "API key inválida ou sem permissão no $PROVIDER$. Confira a chave na aba IA.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorNoCredits": {
+    "message": "Sem créditos no $PROVIDER$.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorRateLimit": {
+    "message": "Rate limit do $PROVIDER$ atingido. Aguarde um pouco e tente de novo.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorHttp": {
+    "message": "Erro HTTP $STATUS$ na API do $PROVIDER$.",
+    "placeholders": { "status": { "content": "$1" }, "provider": { "content": "$2" } }
+  },
+  "aiErrorNetwork": {
+    "message": "Falha de rede ao chamar o $PROVIDER$. Verifique a conexão.",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+  "aiErrorResponseNotJSON": { "message": "Resposta do modelo não é JSON válido" },
+  "aiErrorMissingAssignments": { "message": "Resposta do modelo sem o campo \"assignments\"" },
+  "aiErrorEmptyResponse": { "message": "Resposta vazia do modelo" },
+  "aiErrorUnknownProvider": {
+    "message": "Provider desconhecido: $PROVIDER$",
+    "placeholders": { "provider": { "content": "$1" } }
+  },
+
+  "sectionStudy": { "message": "O que estudar hoje" },
+  "sectionWatch": { "message": "O que assistir hoje" },
+  "sectionMusic": { "message": "Praticar música" },
+  "sectionTools": { "message": "Ferramentas" },
+  "sectionCode": { "message": "Repos & Code" },
+  "sectionAi": { "message": "AI & LLMs" },
+  "sectionWork": { "message": "Trabalho" },
+  "sectionExplore": { "message": "Explorar" },
+  "sectionInbox": { "message": "Não categorizado" }
+}

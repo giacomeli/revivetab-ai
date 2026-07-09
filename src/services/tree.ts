@@ -1,4 +1,4 @@
-// tree.js — leitura da árvore de bookmarks (módulo puro, testável).
+// services/tree.ts — leitura da árvore de bookmarks (módulo puro, testável).
 //
 // Os containers-raiz especiais do browser (barra de favoritos, outros
 // favoritos, mobile...) são detectados por posição — filhos do nó raiz —
@@ -6,15 +6,18 @@
 // Seus nomes NÃO entram no folderList (nem no breadcrumb, nem no matching
 // de pastas do seed).
 
-export function walk(node, folders) {
-  let out = [];
+import type { Bookmark, TreeNode } from '../types';
+
+export function walk(node: TreeNode, folders: string[]): Bookmark[] {
+  let out: Bookmark[] = [];
   // Nó de URL: o folderList é só o caminho de pastas — o próprio título do
   // bookmark NÃO entra (entrava no walk original, poluindo breadcrumb e
-  // matching de pastas do seed).
+  // matching de pastas do seed). Título vazio permanece vazio; a UI exibe
+  // t('untitled') no render (módulo puro não conhece i18n).
   if (node.url) {
     out.push({
       id: node.id,
-      title: node.title || '(sem titulo)',
+      title: node.title || '',
       url: node.url,
       folders: new Set(folders),
       folderList: folders.slice(),
@@ -35,8 +38,8 @@ export function walk(node, folders) {
 // Coleta todos os bookmarks a partir do retorno de chrome.bookmarks.getTree().
 // Favorito direto em um container (barra/gerais) fica com folderList vazio —
 // é um favorito "solto", elegível apenas às regras de URL do seed.
-export function collectBookmarks(tree) {
-  let out = [];
+export function collectBookmarks(tree: TreeNode[] | undefined): Bookmark[] {
+  let out: Bookmark[] = [];
   for (const root of tree || []) {
     for (const container of root.children || []) {
       for (const child of container.children || []) {

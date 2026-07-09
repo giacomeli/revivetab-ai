@@ -1,17 +1,26 @@
-// sections.js
-// Section configuration, seed rules, slugify, seedCategorize, reconcileMembership.
+// services/sections.ts
+// Seções padrão, regras de seed, slugify, seedCategorize, reconcileMembership.
 
-export const DEFAULT_SECTIONS = [
-  { id: 'study',   label: 'O que estudar hoje',  icon: 'book-open', color: '#4fc3f7', order: 0 },
-  { id: 'watch',   label: 'O que assistir hoje', icon: 'video',     color: '#ef5350', order: 1 },
-  { id: 'music',   label: 'Praticar música',     icon: 'music',     color: '#ff9800', order: 2 },
-  { id: 'tools',   label: 'Ferramentas',         icon: 'wrench',    color: '#66bb6a', order: 3 },
-  { id: 'code',    label: 'Repos & Code',        icon: 'code',      color: '#ce93d8', order: 4 },
-  { id: 'ai',      label: 'AI & LLMs',           icon: 'bot',       color: '#ab47bc', order: 5 },
-  { id: 'work',    label: 'Trabalho',            icon: 'briefcase', color: '#ffa726', order: 6 },
-  { id: 'explore', label: 'Explorar',            icon: 'globe',     color: '#26c6da', order: 7 },
-  { id: 'inbox',   label: 'Não categorizado',    icon: 'inbox',     color: '#888888', order: 999, builtin: true },
-];
+import type { Bookmark, Membership, Meta, Section, SeedRules, TreeNode } from '../types';
+import { t } from './i18n';
+
+// Seções padrão. Os labels são resolvidos via i18n NO MOMENTO DA CHAMADA: o
+// seed grava os labels no idioma do browser do usuário; instalações
+// existentes mantêm os labels já salvos em bd:sections (renomeáveis pela UI).
+// Ids, ícones, cores e ordem são imutáveis.
+export function defaultSections(): Section[] {
+  return [
+    { id: 'study',   label: t('sectionStudy'),   icon: 'book-open', color: '#4fc3f7', order: 0 },
+    { id: 'watch',   label: t('sectionWatch'),   icon: 'video',     color: '#ef5350', order: 1 },
+    { id: 'music',   label: t('sectionMusic'),   icon: 'music',     color: '#ff9800', order: 2 },
+    { id: 'tools',   label: t('sectionTools'),   icon: 'wrench',    color: '#66bb6a', order: 3 },
+    { id: 'code',    label: t('sectionCode'),    icon: 'code',      color: '#ce93d8', order: 4 },
+    { id: 'ai',      label: t('sectionAi'),      icon: 'bot',       color: '#ab47bc', order: 5 },
+    { id: 'work',    label: t('sectionWork'),    icon: 'briefcase', color: '#ffa726', order: 6 },
+    { id: 'explore', label: t('sectionExplore'), icon: 'globe',     color: '#26c6da', order: 7 },
+    { id: 'inbox',   label: t('sectionInbox'),   icon: 'inbox',     color: '#888888', order: 999, builtin: true },
+  ];
+}
 
 // Versão das regras de semeadura. Bump força re-seed automático nas
 // instalações existentes (ver needsReSeed).
@@ -22,7 +31,7 @@ export const SEED_VERSION = 2;
 // nome de pasta (pt/en, comparadas por token inteiro — ver _folderMatches)
 // e padrões de URL de domínios amplamente conhecidos. Nunca acoplar a
 // estruturas de pastas pessoais. Pasta tem prioridade sobre URL.
-export const SEED_RULES = {
+export const SEED_RULES: SeedRules = {
   study:   { folders: ['study', 'estudos', 'estudo', 'cursos', 'courses', 'learn', 'docs', 'livros', 'books'],
              urls: [/udemy\.com/, /coursera\.org/, /alura\.com/, /medium\.com/, /dev\.to/, /wikipedia\.org/] },
   watch:   { folders: ['videos', 'video', 'filmes', 'movies', 'series', 'watch', 'assistir'],
@@ -39,11 +48,12 @@ export const SEED_RULES = {
 };
 
 // true quando a instalação foi semeada por uma versão anterior das regras.
-export function needsReSeed(meta) {
+// Aceita Partial porque metas legadas (v1) podem não ter o campo version.
+export function needsReSeed(meta: Partial<Meta> | null | undefined): boolean {
   return !!(meta && meta.seeded) && (meta.version || 1) < SEED_VERSION;
 }
 
-export function slugify(text) {
+export function slugify(text: string): string {
   return String(text || '')
     .toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -52,20 +62,20 @@ export function slugify(text) {
     .slice(0, 40) || 'section';
 }
 
-export function uniqueSectionId(baseSlug, existingIds) {
+export function uniqueSectionId(baseSlug: string, existingIds: string[]): string {
   if (!existingIds.includes(baseSlug)) return baseSlug;
   let n = 2;
   while (existingIds.includes(baseSlug + '-' + n)) n++;
   return baseSlug + '-' + n;
 }
 
-function _normalize(s) {
+function _normalize(s: string): string {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 // Match por token inteiro (insensível a caixa e acento), nunca substring:
 // keywords genéricas curtas dariam falso positivo ('ai' casaria com 'Email').
-function _folderMatches(folderList, ruleFolders) {
+function _folderMatches(folderList: string[], ruleFolders: string[]): boolean {
   for (const folder of folderList) {
     const tokens = _normalize(folder).split(/[\s\-_/.]+/).filter(Boolean);
     if (!tokens.length) continue;
@@ -76,7 +86,10 @@ function _folderMatches(folderList, ruleFolders) {
   return false;
 }
 
-export function seedCategorize(bookmark, rules) {
+// Campos mínimos que o seed precisa de um bookmark.
+export type SeedableBookmark = Pick<Partial<Bookmark>, 'url' | 'folderList'>;
+
+export function seedCategorize(bookmark: SeedableBookmark, rules: SeedRules): string | null {
   const folderList = bookmark.folderList || [];
   const url = bookmark.url || '';
   for (const sid in rules) {
@@ -90,11 +103,21 @@ export function seedCategorize(bookmark, rules) {
   return null;
 }
 
-export function reconcileMembership(existingMembership, currentBookmarks, defaultSectionId = 'inbox') {
-  const result = {};
-  const currentIds = new Set();
-  const added = [];
-  const removed = [];
+export interface ReconcileResult {
+  membership: Membership;
+  added: string[];
+  removed: string[];
+}
+
+export function reconcileMembership(
+  existingMembership: Membership,
+  currentBookmarks: Array<Pick<Bookmark, 'id'>>,
+  defaultSectionId = 'inbox'
+): ReconcileResult {
+  const result: Membership = {};
+  const currentIds = new Set<string>();
+  const added: string[] = [];
+  const removed: string[] = [];
   for (const bm of currentBookmarks) {
     currentIds.add(bm.id);
     if (Object.prototype.hasOwnProperty.call(existingMembership, bm.id)) {
@@ -110,23 +133,45 @@ export function reconcileMembership(existingMembership, currentBookmarks, defaul
   return { membership: result, added, removed };
 }
 
-export async function ensureSeeded(state, currentBookmarks, currentTree, persistBackup, persist) {
-  if (state.meta && state.meta.seeded) return state;
+export interface SeededState {
+  sections: Section[];
+  membership: Membership;
+  meta: Meta;
+}
+
+interface SeedPersisters {
+  sections: (sections: Section[]) => Promise<void>;
+  membership: (membership: Membership) => Promise<void>;
+  meta: (meta: Meta) => Promise<void>;
+}
+
+export async function ensureSeeded(
+  state: { sections: Section[] | null; membership: Membership; meta: Meta | null },
+  currentBookmarks: Array<Pick<Bookmark, 'id' | 'url' | 'folderList'>>,
+  currentTree: TreeNode[],
+  persistBackup: (tree: TreeNode[]) => Promise<void>,
+  persist: SeedPersisters
+): Promise<SeededState> {
+  // Já semeado: devolve o estado carregado como está (sections vem do storage).
+  if (state.meta && state.meta.seeded) return state as SeededState;
   await persistBackup(currentTree);
-  const sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
-  const membership = {};
+  const sections = defaultSections();
+  const membership: Membership = {};
   for (const bm of currentBookmarks) {
     membership[bm.id] = seedCategorize(bm, SEED_RULES) || 'inbox';
   }
-  const meta = { version: SEED_VERSION, seeded: true };
+  const meta: Meta = { version: SEED_VERSION, seeded: true };
   await persist.sections(sections);
   await persist.membership(membership);
   await persist.meta(meta);
   return { sections, membership, meta };
 }
 
-export async function reSeedAll(currentBookmarks, persistMembership) {
-  const membership = {};
+export async function reSeedAll(
+  currentBookmarks: Array<Pick<Bookmark, 'id' | 'url' | 'folderList'>>,
+  persistMembership: (membership: Membership) => Promise<void>
+): Promise<Membership> {
+  const membership: Membership = {};
   for (const bm of currentBookmarks) {
     membership[bm.id] = seedCategorize(bm, SEED_RULES) || 'inbox';
   }

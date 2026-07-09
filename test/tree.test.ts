@@ -1,6 +1,6 @@
-// test/tree.test.js — npm test
+// test/tree.test.ts — npm test
 import { describe, it, expect } from 'vitest';
-import { walk, collectBookmarks } from '../src/tree.js';
+import { walk, collectBookmarks } from '../src/services/tree';
 
 // Fixture no formato de chrome.bookmarks.getTree(): raiz id 0 sem título,
 // containers especiais como filhos diretos (títulos localizados variam por
