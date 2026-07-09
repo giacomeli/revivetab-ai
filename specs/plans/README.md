@@ -6,5 +6,8 @@ Histórico de specs e planos do projeto. Cada entrada corresponde a uma pasta
 
 | Data | Pasta | Descrição |
 | --- | --- | --- |
+| 08-07-2026 | [`2026-07-08-195124_internacionalizacao-i18n/`](./2026-07-08-195124_internacionalizacao-i18n/) | i18n via chrome.i18n: catálogos en/es/pt_BR (89 chaves), manifest localizado, wrapper t(), seções default no idioma do browser |
+| 08-07-2026 | [`2026-07-08-191219_marca-revivetab-e-kit-publicacao/`](./2026-07-08-191219_marca-revivetab-e-kit-publicacao/) | Rebrand para ReviveTab AI (manifest, ícone SVG+PNGs, tema) e kit de publicação CWS (README, LICENSE, PRIVACY, store/, zip) |
+| 08-07-2026 | [`2026-07-08-144717_refatoracao-typescript-camadas/`](./2026-07-08-144717_refatoracao-typescript-camadas/) | Migração completa para TypeScript estrito com arquitetura em camadas (ui/services/data/assets) e adaptador de chrome.bookmarks |
 | 08-07-2026 | [`2026-07-08-125741_classificacao-automatica-por-ia/`](./2026-07-08-125741_classificacao-automatica-por-ia/) | Classificação automática por IA (DeepSeek/OpenRouter): aba IA no modal, cliente OpenAI-compatible, lotes com prévia/aplicar/desfazer |
 | 08-07-2026 | [`2026-07-08-113316_desacoplamento-generico-e-player-youtube/`](./2026-07-08-113316_desacoplamento-generico-e-player-youtube/) | Seed genérico (regras universais, matching por token, re-seed automático v2), leitura da árvore agnóstica de browser e player de YouTube em modal com regra DNR de Referer |

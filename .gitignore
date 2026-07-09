@@ -8,3 +8,4 @@ dist/
 
 # backups locais de dados pessoais (referencia de dev)
 util/
+*.zip
