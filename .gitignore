@@ -12,3 +12,6 @@ util/
 
 # docs internas de desenvolvimento (planos, kit de loja, CLAUDE.md)
 specs/
+
+# capturas locais e assets de loja (contem dados pessoais de bookmarks)
+screenshots/
