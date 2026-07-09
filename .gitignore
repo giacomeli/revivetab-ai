@@ -9,3 +9,6 @@ dist/
 # backups locais de dados pessoais (referencia de dev)
 util/
 *.zip
+
+# docs internas de desenvolvimento (planos, kit de loja, CLAUDE.md)
+specs/

@@ -4,61 +4,60 @@
 
 <h1 align="center">ReviveTab AI</h1>
 
-<p align="center"><strong>Não deixe seus favoritos morrerem na desorganização.</strong></p>
+<p align="center"><strong>Don't let your bookmarks die in disarray.</strong></p>
 
-<p align="center">Título de loja: <em>ReviveTab AI: Bookmarks & Speed Dial</em></p>
+<p align="center">Store title: <em>ReviveTab AI: Bookmarks & Speed Dial</em></p>
 
 ---
 
-Você também acumula centenas de favoritos que caem no esquecimento e nunca mais são abertos? O
-ReviveTab AI substitui a página de Nova Guia por um Speed Dial dinâmico e inteligente: a IA organiza
-seus links automaticamente em seções, e cada nova aba vira um ponto de contato com o que você salvou
-ao longo dos anos. Diga adeus ao "cemitério de links".
+Do you also pile up hundreds of bookmarks that fall into oblivion and never get opened again?
+ReviveTab AI replaces the New Tab page with a dynamic, intelligent Speed Dial: AI organizes your
+links into sections automatically, and every new tab becomes a touchpoint with everything you have
+saved over the years. Say goodbye to the "link graveyard".
 
-## Recursos
+## Features
 
-- **Organização inteligente com IA** — conecte sua API key (DeepSeek ou OpenRouter, com seleção de
-  modelo) e recategorize centenas de favoritos em seções lógicas, com prévia antes de aplicar e
-  botão de desfazer.
-- **Speed Dial com carrosséis infinitos** — nova guia visual, fluida e customizável.
-- **Modo Shuffle** — favoritos esquecidos aparecem aleatoriamente nas seções; a melhor forma de
-  revisitar o que você salvou.
-- **Player de YouTube em modal** — vídeos favoritados tocam na própria nova guia.
-- **Produtividade** — drag-and-drop entre seções, seções customizáveis (nome, ícone, cor, ordem),
-  busca instantânea e backup/export do layout.
-- **Seguro por padrão** — a estrutura de pastas do browser nunca é alterada; as únicas escritas em
-  `chrome.bookmarks` são renomear e excluir, sempre por ação explícita sua.
+- **Smart organization with AI** — connect your API key (DeepSeek or OpenRouter, with model
+  selection) and recategorize hundreds of bookmarks into logical sections, with a preview before
+  applying and an undo button.
+- **Speed Dial with infinite carousels** — a visual, fluid and customizable new tab.
+- **Shuffle mode** — forgotten bookmarks show up randomly in each section; the best way to
+  revisit what you saved.
+- **YouTube player in a modal** — bookmarked videos play right on the new tab.
+- **Productivity** — drag-and-drop between sections, customizable sections (name, icon, color,
+  order), instant search and layout backup/export.
+- **Safe by default** — your browser's folder structure is never changed; the only writes to
+  `chrome.bookmarks` are rename and delete, always triggered by your explicit action.
 
-## Instalação
+## Installation
 
-**Chrome Web Store:** em breve.
+**Chrome Web Store:** coming soon.
 
-**Modo desenvolvedor (qualquer browser Chromium):**
+**Developer mode (any Chromium browser):**
 
 1. `npm install && npm run build`
-2. Abra `chrome://extensions` (ou `brave://extensions`), ligue o Developer Mode
-3. "Load unpacked" apontando para a pasta `dist/`
-4. Abra uma nova guia
+2. Open `chrome://extensions` (or `brave://extensions`) and enable Developer Mode
+3. "Load unpacked" pointing to the `dist/` folder
+4. Open a new tab
 
-## Desenvolvimento
+## Development
 
-Stack: TypeScript estrito, Vite + @crxjs/vite-plugin, TailwindCSS + daisyUI, Vitest. Arquitetura em
-camadas (`ui/` -> `services/` -> `data/`), documentada em `CLAUDE.md`; histórico de decisões em
-`specs/plans/`.
+Stack: strict TypeScript, Vite + @crxjs/vite-plugin, TailwindCSS + daisyUI, Vitest. Layered
+architecture with one-way dependencies (`ui/` -> `services/` -> `data/`).
 
 ```bash
-npm run dev              # dev server com HMR (escreve em dist/)
-npm run build            # build de produção
+npm run dev              # dev server with HMR (writes to dist/)
+npm run build            # production build
 npm run typecheck        # tsc --noEmit (strict)
-npm test                 # suite Vitest
+npm test                 # Vitest suite
 ```
 
-## Privacidade
+## Privacy
 
-Seus dados ficam no seu browser. A API key de IA é armazenada localmente e os títulos/URLs de
-favoritos só são enviados ao provider que você configurou quando você aciona a organização por IA.
-Sem analytics, sem servidores próprios. Política completa em [PRIVACY.md](PRIVACY.md).
+Your data stays in your browser. The AI API key is stored locally, and bookmark titles/URLs are
+only sent to the provider you configured, and only when you trigger the AI organization. No
+analytics, no first-party servers. Full policy in [PRIVACY.md](PRIVACY.md).
 
-## Licença
+## License
 
 [MIT](LICENSE)
