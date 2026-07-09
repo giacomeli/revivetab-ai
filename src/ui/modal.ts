@@ -1,8 +1,13 @@
-// modal.js — shared modal helper using daisyUI modal classes.
+// ui/modal.ts — helper de modal compartilhado (classes do daisyUI).
 
-let _activeEscHandler = null;
+let _activeEscHandler: ((e: KeyboardEvent) => void) | null = null;
 
-export function showModal(html, options = {}) {
+export interface ModalOptions {
+  wide?: boolean;
+  boxClass?: string;
+}
+
+export function showModal(html: string, options: ModalOptions = {}): HTMLDivElement {
   closeModal();
   const overlay = document.createElement('div');
   overlay.className = 'modal modal-open bd-modal-overlay';
@@ -13,7 +18,8 @@ export function showModal(html, options = {}) {
   document.body.appendChild(overlay);
 
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay || e.target.classList.contains('modal-backdrop')) {
+    const target = e.target as Element;
+    if (target === overlay || target.classList.contains('modal-backdrop')) {
       closeModal();
     }
   });
@@ -23,7 +29,7 @@ export function showModal(html, options = {}) {
   return overlay;
 }
 
-export function closeModal() {
+export function closeModal(): void {
   const m = document.querySelector('.bd-modal-overlay');
   if (m) m.remove();
   if (_activeEscHandler) {

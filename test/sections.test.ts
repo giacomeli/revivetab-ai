@@ -1,9 +1,9 @@
-// test/sections.test.js — npm test
+// test/sections.test.ts — npm test
 import { describe, it, expect } from 'vitest';
 import {
   slugify, uniqueSectionId, seedCategorize, reconcileMembership, SEED_RULES,
   needsReSeed, SEED_VERSION,
-} from '../src/sections.js';
+} from '../src/services/sections';
 
 describe('slugify', () => {
   it('basic ASCII', () => expect(slugify('Hello World')).toBe('hello-world'));

@@ -1,8 +1,8 @@
-// icons.js
+// assets/icons.ts
 // Lucide icons (https://lucide.dev) — ISC License
-// Each SVG body is the path content without the outer <svg> wrapper attrs (those go in iconSVG).
+// Cada corpo SVG é o conteúdo dos paths sem o wrapper <svg> (que vai no iconSVG).
 
-export const LUCIDE_ICONS = {
+export const LUCIDE_ICONS: Record<string, string> = {
   'book-open':      '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
   'video':          '<path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>',
   'music':          '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
@@ -52,14 +52,13 @@ export const LUCIDE_ICONS = {
   'shuffle':        '<path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/>',
 };
 
-export function iconSVG(name, size) {
-  size = size || 20;
+export function iconSVG(name: string, size = 20): string {
   const body = LUCIDE_ICONS[name] || LUCIDE_ICONS['bookmark'];
   return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size
     + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
     + 'stroke-linecap="round" stroke-linejoin="round">' + body + '</svg>';
 }
 
-export function iconNames() {
+export function iconNames(): string[] {
   return Object.keys(LUCIDE_ICONS);
 }

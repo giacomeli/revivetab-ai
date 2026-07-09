@@ -1,37 +1,43 @@
-// dial.js
-// Main rendering, search, carousel, init, bookmark listeners.
+// ui/dial.ts
+// Render principal, busca, carousel, init e listeners de bookmarks.
 
-import { STATE, dbg, getLog, tstamp, timed, timedAsync } from './state.js';
-import { collectBookmarks } from './tree.js';
-import { ytId } from './yt.js';
-import { iconSVG } from './icons.js';
+import { STATE, dbg, getLog, tstamp, timed } from '../state';
+import { collectBookmarks } from '../services/tree';
+import { ytId } from '../services/yt';
+import { t } from '../services/i18n';
+import { iconSVG } from '../assets/icons';
 import {
   loadAll, saveSections, saveMembership, saveMeta, saveInitialBackup,
-} from './storage.js';
-import { ensureSeeded, reconcileMembership, needsReSeed, reSeedAll, SEED_VERSION } from './sections.js';
-import { setupDragAndDrop, registerRenderer as registerDndRenderer, cleanupDragState } from './dnd.js';
-import { openSectionsModal, registerRenderer as registerModalRenderer } from './modal-sections.js';
-import { registerRenderer as registerAiRenderer } from './modal-ai.js';
-import { editBookmark, deleteBookmark, registerRenderer as registerOpsRenderer } from './bookmark-ops.js';
-import { showModal } from './modal.js'; // ensure side imports
-import { openVideoModal } from './video-modal.js';
+} from '../data/storage';
+import {
+  getTree, bookmarksApiAvailable, onBookmarkRemoved, onBookmarkCreated, onBookmarkChanged,
+} from '../data/bookmarks';
+import {
+  ensureSeeded, reconcileMembership, needsReSeed, reSeedAll, SEED_VERSION,
+} from '../services/sections';
+import { setupDragAndDrop, registerRenderer as registerDndRenderer, cleanupDragState } from './dnd';
+import { openSectionsModal, registerRenderer as registerModalRenderer } from './modal-sections';
+import { registerRenderer as registerAiRenderer } from './modal-ai';
+import { editBookmark, deleteBookmark, registerRenderer as registerOpsRenderer } from './bookmark-ops';
+import { openVideoModal } from './video-modal';
+import type { Bookmark, Membership, Meta, Section } from '../types';
 
 // ============================================================
 // HELPERS
 // ============================================================
-function extractDomain(u) {
+function extractDomain(u: string): string {
   try { return new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
 }
-function clean(t) {
+function clean(t: string): string {
   return t.replace(/^\(\d+\)\s*/, '').replace(/\s*-\s*YouTube$/, '')
     .replace(/\s*\|\s*[^|]+$/, '').trim() || t;
 }
-function esc(t) {
+function esc(t: string): string {
   const d = document.createElement('div');
   d.textContent = t;
   return d.innerHTML;
 }
-function shuffle(a) {
+function shuffle<T>(a: T[]): T[] {
   const b = a.slice();
   for (let i = b.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -39,7 +45,7 @@ function shuffle(a) {
   }
   return b;
 }
-function faviconUrl(u, size) {
+function faviconUrl(u: string, size?: number): string {
   const sz = size || 32;
   try {
     const origin = new URL(u).origin;
@@ -53,8 +59,8 @@ function faviconUrl(u, size) {
 // ============================================================
 // GROUP BY MEMBERSHIP
 // ============================================================
-function groupByMembership(bookmarks, membership, sections) {
-  const out = {};
+function groupByMembership(bookmarks: Bookmark[], membership: Membership, sections: Section[]): Record<string, Bookmark[]> {
+  const out: Record<string, Bookmark[]> = {};
   for (const s of sections) out[s.id] = [];
   for (const bm of bookmarks) {
     const sid = membership[bm.id] || 'inbox';
@@ -67,10 +73,10 @@ function groupByMembership(bookmarks, membership, sections) {
 // ============================================================
 // CONFIG
 // ============================================================
-// Cap on cards rendered per section. Above this, MAX_PER_SECTION items are
-// picked at random (shuffle + slice) from the section's bookmarks. Remaining
-// are still searchable via the search box. Main perf knob (initCarousels was
-// 570ms+ before this cap).
+// Teto de cards renderizados por seção. Acima disso, MAX_PER_SECTION itens são
+// sorteados (shuffle + slice) dentre os bookmarks da seção. Os demais seguem
+// encontráveis pela busca. Principal knob de perf (initCarousels passava de
+// 570ms antes desse teto).
 const MAX_PER_SECTION = 50;
 const CARD_WIDTH_PX = 170;
 const CARD_GAP_PX = 10;
@@ -78,14 +84,14 @@ const CARD_GAP_PX = 10;
 // ============================================================
 // CARD HTML
 // ============================================================
-function cardHTML(bm) {
+function cardHTML(bm: Bookmark): string {
   const d = extractDomain(bm.url);
   const yt = ytId(bm.url);
-  const title = clean(bm.title);
+  const title = clean(bm.title) || t('untitled');
   const initial = (d.charAt(0) || '?').toUpperCase();
   const fav = faviconUrl(bm.url);
   const favLg = faviconUrl(bm.url, 128);
-  let thumb;
+  let thumb: string;
   if (yt) {
     thumb = `<img class="bd-yt-thumb bd-lazy-thumb absolute top-0 left-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
       data-src="https://img.youtube.com/vi/${yt}/mqdefault.jpg"
@@ -108,11 +114,11 @@ function cardHTML(bm) {
   const actions = `
     <div class="dial-actions absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
       <button class="btn-edit btn btn-xs btn-square bg-white/10 hover:bg-info/50 border-0 backdrop-blur"
-              data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="Editar título" aria-label="Editar">
+              data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('editTitleTooltip'))}" aria-label="${esc(t('edit'))}">
         ${iconSVG('pencil', 14)}
       </button>
       <button class="btn-del btn btn-xs btn-square bg-white/10 hover:bg-error/60 border-0 backdrop-blur"
-              data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="Excluir favorito" aria-label="Excluir">
+              data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('deleteBookmark'))}" aria-label="${esc(t('delete'))}">
         ${iconSVG('x', 14)}
       </button>
     </div>`;
@@ -121,8 +127,8 @@ function cardHTML(bm) {
     ? `<div class="bd-card-breadcrumb text-[0.58rem] text-base-content/45 truncate mb-0.5">${crumbs.map((f) => esc(f)).join(' <span class="opacity-50 mx-0.5">›</span> ')}</div>`
     : '';
 
-  // Width classes applied here (in the HTML template) to avoid a giant
-  // post-render loop adding them per-card in initCarousels.
+  // Classes de largura aplicadas aqui (no template) para evitar um loop
+  // pós-render gigante adicionando-as por card no initCarousels.
   return `
     <div class="dial-wrap group/card relative flex flex-col overflow-hidden rounded-2xl bg-base-content/5 hover:bg-base-content/10 border border-base-content/5 hover:border-base-content/15 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer flex-none w-[170px] min-w-[170px]"
          data-bm-id="${esc(bm.id)}" data-href="${esc(bm.url)}" title="${esc(bm.title)}">
@@ -144,21 +150,21 @@ function cardHTML(bm) {
 // ============================================================
 // LAZY LOAD
 // ============================================================
-let thumbObserver = null;
-function initThumbObserver() {
+let thumbObserver: IntersectionObserver | null = null;
+function initThumbObserver(): void {
   if (thumbObserver) thumbObserver.disconnect();
   thumbObserver = new IntersectionObserver((entries) => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
-      const img = entry.target;
-      thumbObserver.unobserve(img);
+      const img = entry.target as HTMLImageElement;
+      thumbObserver!.unobserve(img);
       loadThumb(img);
     }
   }, { rootMargin: '200px 600px' });
-  document.querySelectorAll('.bd-lazy-thumb[data-src]').forEach((img) => thumbObserver.observe(img));
+  document.querySelectorAll<HTMLImageElement>('.bd-lazy-thumb[data-src]').forEach((img) => thumbObserver!.observe(img));
 }
 
-function loadThumb(img) {
+function loadThumb(img: HTMLImageElement): void {
   const src = img.getAttribute('data-src');
   const fallback = img.getAttribute('data-fallback');
   const initial = img.getAttribute('data-initial') || '?';
@@ -169,7 +175,7 @@ function loadThumb(img) {
     img.removeAttribute('data-src');
     img.classList.remove('opacity-0');
     img.classList.add('opacity-100');
-    const ph = img.parentElement.querySelector('.bd-thumb-placeholder');
+    const ph = img.parentElement?.querySelector<HTMLElement>('.bd-thumb-placeholder');
     if (ph) ph.style.display = 'none';
   };
   loader.onerror = () => {
@@ -179,7 +185,7 @@ function loadThumb(img) {
       loadThumb(img);
       return;
     }
-    const ph = img.parentElement.querySelector('.bd-thumb-placeholder');
+    const ph = img.parentElement?.querySelector<HTMLElement>('.bd-thumb-placeholder');
     if (ph) ph.innerHTML = `<span class="text-2xl font-bold uppercase opacity-50 text-base-content/50">${initial}</span>`;
     img.style.display = 'none';
   };
@@ -189,22 +195,22 @@ function loadThumb(img) {
 // ============================================================
 // SECTION HTML
 // ============================================================
-function sectionHTML(sec, items) {
+function sectionHTML(sec: Section, items: Bookmark[]): string {
   const total = items.length;
   const capped = total > MAX_PER_SECTION;
-  // shuffle for variety; if capped, only build HTML for the first MAX_PER_SECTION.
+  // shuffle para variedade; se passou do teto, só monta HTML dos MAX_PER_SECTION.
   const pick = capped ? shuffle(items).slice(0, MAX_PER_SECTION) : shuffle(items);
   const cards = pick.map((bm) => cardHTML(bm)).join('');
   const iconHtml = iconSVG(sec.icon || 'bookmark', 18);
   const countBadge = capped
-    ? `<span class="badge badge-sm badge-ghost ml-2 opacity-60" title="Total ${total} — mostrando ${MAX_PER_SECTION} aleatórios (clique Shuffle para outros, use a busca para encontrar específicos)">${total}/${MAX_PER_SECTION}</span>`
+    ? `<span class="badge badge-sm badge-ghost ml-2 opacity-60" title="${esc(t('cappedBadgeTitle', [String(total), String(MAX_PER_SECTION)]))}">${total}/${MAX_PER_SECTION}</span>`
     : (total > 0 ? `<span class="text-xs opacity-40 ml-2">${total}</span>` : '');
   const headHtml = `
     <div class="bd-group-head flex items-center gap-2.5 pl-1 mb-3.5">
       <span class="bd-group-dot w-1.5 h-1.5 rounded-full" style="background:${esc(sec.color || '#888')}"></span>
       <span class="bd-group-icon inline-flex items-center" style="color:${esc(sec.color || '#ccc')}">${iconHtml}</span>
       <span class="bd-group-label text-sm font-medium opacity-90 cursor-text px-1 py-0.5 rounded hover:bg-base-content/5"
-            data-section-id="${esc(sec.id)}" tabindex="0" title="Clique para renomear">${esc(sec.label)}</span>
+            data-section-id="${esc(sec.id)}" tabindex="0" title="${esc(t('renameSectionHint'))}">${esc(sec.label)}</span>
       ${countBadge}
     </div>
   `;
@@ -213,7 +219,7 @@ function sectionHTML(sec, items) {
       <section class="bd-group mb-8" data-section-id="${esc(sec.id)}">
         ${headHtml}
         <div class="bd-empty-section py-8 px-4 text-center text-base-content/40 text-xs border border-dashed border-base-content/10 rounded-lg mx-2">
-          Arraste um card aqui
+          ${esc(t('emptySectionHint'))}
         </div>
       </section>
     `;
@@ -239,13 +245,13 @@ function sectionHTML(sec, items) {
 // ============================================================
 let _renderCount = 0;
 
-export function renderAll() {
+export function renderAll(): void {
   _renderCount++;
   const start = performance.now();
   cleanupDragState('renderAll');
   console.log('[BD-RENDER]', tstamp(), 'renderAll start #' + _renderCount, { body: Array.from(document.body.classList).join(' ') || '(none)' });
 
-  const app = document.getElementById('app');
+  const app = document.getElementById('app')!;
   const byId = timed('groupByMembership', () => groupByMembership(STATE.all, STATE.membership, STATE.sections));
   const sorted = STATE.sections.slice().sort((a, b) => (a.order || 0) - (b.order || 0));
   const htmlBuildStart = performance.now();
@@ -253,7 +259,7 @@ export function renderAll() {
   console.log('[BD-PERF]', tstamp(), 'sectionHTML loop', (performance.now() - htmlBuildStart).toFixed(1) + 'ms', '(' + sorted.length + ' sections)');
 
   const innerHTMLStart = performance.now();
-  app.innerHTML = html || '<div class="text-center py-10 opacity-50 text-sm">Nenhuma seção configurada.</div>';
+  app.innerHTML = html || `<div class="text-center py-10 opacity-50 text-sm">${esc(t('noSections'))}</div>`;
   console.log('[BD-PERF]', tstamp(), 'app.innerHTML set', (performance.now() - innerHTMLStart).toFixed(1) + 'ms');
 
   timed('initCarousels', () => initCarousels());
@@ -267,24 +273,24 @@ export function renderAll() {
 // ============================================================
 // CAROUSEL
 // ============================================================
-function initCarousels() {
-  document.querySelectorAll('.bd-carousel').forEach((vp) => setupCarousel(vp));
+function initCarousels(): void {
+  document.querySelectorAll<HTMLElement>('.bd-carousel').forEach((vp) => setupCarousel(vp));
 }
 
-function setupCarousel(viewport) {
-  const track = viewport.querySelector('.bd-carousel-track');
-  const cards = Array.from(track.querySelectorAll('.dial-wrap'));
+function setupCarousel(viewport: HTMLElement): void {
+  const track = viewport.querySelector<HTMLElement>('.bd-carousel-track')!;
+  const cards = Array.from(track.querySelectorAll<HTMLElement>('.dial-wrap'));
   if (!cards.length) return;
 
-  // Width/gap come from constants — no offsetWidth read needed for the card.
-  // We DO read viewport.offsetWidth (once), but only after all cards have
-  // their fixed widths applied via cardHTML's Tailwind classes.
+  // Largura/gap vêm de constantes — sem leitura de offsetWidth por card.
+  // Lemos viewport.offsetWidth (uma vez), mas só depois de todos os cards
+  // terem largura fixa via classes Tailwind do cardHTML.
   const cardW = CARD_WIDTH_PX + CARD_GAP_PX;
   const visibleCount = Math.max(1, Math.ceil(viewport.offsetWidth / cardW));
   const shouldLoop = cards.length > visibleCount;
 
-  const leftBtn = viewport.querySelector('.bd-carousel-arrow.left');
-  const rightBtn = viewport.querySelector('.bd-carousel-arrow.right');
+  const leftBtn = viewport.querySelector<HTMLElement>('.bd-carousel-arrow.left')!;
+  const rightBtn = viewport.querySelector<HTMLElement>('.bd-carousel-arrow.right')!;
 
   if (!shouldLoop) {
     leftBtn.classList.add('hidden');
@@ -305,14 +311,14 @@ function setupCarousel(viewport) {
 
   if (!shouldLoop) return;
 
-  // Build clone block in a DocumentFragment first (offline DOM), then insert
-  // in two batches. Single deep-clone per slot, no per-card layout thrash.
+  // Bloco de clones montado em DocumentFragment (DOM offline) e inserido em
+  // dois lotes. Um deep-clone por slot, sem layout thrash por card.
   const cloneCount = visibleCount + 1;
 
   const prependFrag = document.createDocumentFragment();
   for (let i = cards.length - cloneCount; i < cards.length; i++) {
     const idx = Math.max(0, i);
-    const clone = cards[idx].cloneNode(true);
+    const clone = cards[idx].cloneNode(true) as HTMLElement;
     clone.classList.add('bd-carousel-clone');
     const actions = clone.querySelector('.dial-actions');
     if (actions) actions.remove();
@@ -320,7 +326,7 @@ function setupCarousel(viewport) {
   }
   const appendFrag = document.createDocumentFragment();
   for (let i = 0; i < cloneCount && i < cards.length; i++) {
-    const clone = cards[i].cloneNode(true);
+    const clone = cards[i].cloneNode(true) as HTMLElement;
     clone.classList.add('bd-carousel-clone');
     const actions = clone.querySelector('.dial-actions');
     if (actions) actions.remove();
@@ -357,7 +363,7 @@ function setupCarousel(viewport) {
   });
 }
 
-let resizeTimer;
+let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 let _initDone = false;
 window.addEventListener('resize', () => {
   if (!_initDone) {
@@ -374,8 +380,8 @@ window.addEventListener('resize', () => {
 // ============================================================
 // SEARCH
 // ============================================================
-function renderSearch(q) {
-  const app = document.getElementById('app');
+function renderSearch(q: string): void {
+  const app = document.getElementById('app')!;
   if (!q.trim()) { renderAll(); return; }
   const lq = q.toLowerCase();
   const res = STATE.all.filter((b) => {
@@ -387,7 +393,7 @@ function renderSearch(q) {
     return false;
   });
   if (!res.length) {
-    app.innerHTML = `<div class="text-center py-10 opacity-50 text-sm">Nada encontrado para "${esc(q)}"</div>`;
+    app.innerHTML = `<div class="text-center py-10 opacity-50 text-sm">${esc(t('searchNoResults', [q]))}</div>`;
     return;
   }
   const show = res.slice(0, 20);
@@ -408,7 +414,7 @@ function renderSearch(q) {
 // ============================================================
 // RENAME SECTION INLINE
 // ============================================================
-function startRenameSection(labelEl) {
+function startRenameSection(labelEl: HTMLElement): void {
   const sectionId = labelEl.getAttribute('data-section-id');
   const sec = STATE.sections.find((s) => s.id === sectionId);
   if (!sec) return;
@@ -420,14 +426,16 @@ function startRenameSection(labelEl) {
   const range = document.createRange();
   range.selectNodeContents(labelEl);
   const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
 
-  function finish(save) {
+  function finish(save: boolean): void {
     labelEl.classList.remove('bg-base-content/10', 'outline', 'outline-1', 'outline-primary/50');
     labelEl.removeAttribute('contenteditable');
-    const newLabel = labelEl.textContent.trim();
-    if (save && newLabel && newLabel !== oldLabel) {
+    const newLabel = (labelEl.textContent || '').trim();
+    if (save && newLabel && newLabel !== oldLabel && sec) {
       sec.label = newLabel;
       saveSections(STATE.sections).then(() => dbg('renamed section ' + sectionId + ' -> ' + newLabel));
     } else {
@@ -436,8 +444,8 @@ function startRenameSection(labelEl) {
     labelEl.removeEventListener('blur', onBlur);
     labelEl.removeEventListener('keydown', onKey);
   }
-  function onBlur() { finish(true); }
-  function onKey(ev) {
+  function onBlur(): void { finish(true); }
+  function onKey(ev: KeyboardEvent): void {
     if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
     else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
   }
@@ -448,10 +456,10 @@ function startRenameSection(labelEl) {
 // ============================================================
 // CHROME BOOKMARK LISTENERS
 // ============================================================
-function setupBookmarkListeners() {
-  if (!chrome.bookmarks || !chrome.bookmarks.onRemoved) return;
+function setupBookmarkListeners(): void {
+  if (!bookmarksApiAvailable()) return;
 
-  chrome.bookmarks.onRemoved.addListener(async (id) => {
+  onBookmarkRemoved(async (id) => {
     if (Object.prototype.hasOwnProperty.call(STATE.membership, id)) {
       delete STATE.membership[id];
       await saveMembership(STATE.membership);
@@ -460,13 +468,13 @@ function setupBookmarkListeners() {
     renderAll();
   });
 
-  chrome.bookmarks.onCreated.addListener(async (id, node) => {
+  onBookmarkCreated(async (id, node) => {
     if (!node.url) return;
     STATE.all.push({
       id,
-      title: node.title || '(sem titulo)',
+      title: node.title || '',
       url: node.url,
-      folders: new Set([]),
+      folders: new Set<string>([]),
       folderList: [],
       added: node.dateAdded || Date.now(),
     });
@@ -475,7 +483,7 @@ function setupBookmarkListeners() {
     renderAll();
   });
 
-  chrome.bookmarks.onChanged.addListener((id, changes) => {
+  onBookmarkChanged((id, changes) => {
     for (let i = 0; i < STATE.all.length; i++) {
       if (STATE.all[i].id === id) {
         if (changes.title !== undefined) STATE.all[i].title = changes.title;
@@ -491,30 +499,25 @@ function setupBookmarkListeners() {
 // ============================================================
 // INIT
 // ============================================================
-export async function init() {
+export async function init(): Promise<void> {
   dbg('init start');
 
-  // Cross-module renderer wiring
+  // Wiring de renderer entre módulos
   registerDndRenderer(renderAll);
   registerModalRenderer(renderAll);
   registerOpsRenderer(renderAll);
   registerAiRenderer(renderAll);
 
-  const app = document.getElementById('app');
-  app.innerHTML = '<div class="text-center py-10 opacity-50 text-sm">Carregando favoritos...</div>';
+  const app = document.getElementById('app')!;
+  app.innerHTML = `<div class="text-center py-10 opacity-50 text-sm">${esc(t('loadingBookmarks'))}</div>`;
 
   const settingsBtn = document.getElementById('btn-settings');
   if (settingsBtn) settingsBtn.innerHTML = iconSVG('settings', 18);
   const shuffleBtn = document.getElementById('btn-shuffle');
-  if (shuffleBtn) shuffleBtn.innerHTML = iconSVG('shuffle', 16) + '<span class="ml-1.5">Shuffle</span>';
+  if (shuffleBtn) shuffleBtn.innerHTML = iconSVG('shuffle', 16) + `<span class="ml-1.5">${esc(t('shuffle'))}</span>`;
 
   try {
-    const tree = await new Promise((resolve, reject) => {
-      chrome.bookmarks.getTree((t) => {
-        if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
-        resolve(t);
-      });
-    });
+    const tree = await getTree();
 
     timed('collectBookmarks(tree)', () => {
       STATE.all = collectBookmarks(tree);
@@ -522,7 +525,7 @@ export async function init() {
     dbg('total bookmarks: ' + STATE.all.length);
 
     const loaded = await loadAll();
-    let state = {
+    let state: { sections: Section[] | null; membership: Membership; meta: Meta | null } = {
       sections: loaded.sections,
       membership: loaded.membership || {},
       meta: loaded.meta,
@@ -553,7 +556,7 @@ export async function init() {
       }
     }
 
-    STATE.sections = state.sections;
+    STATE.sections = state.sections || [];
     STATE.membership = state.membership;
     STATE.meta = state.meta;
     STATE.sections.sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -563,12 +566,13 @@ export async function init() {
     _initDone = true;
     dbg('render complete (init unblocked)');
   } catch (err) {
-    dbg('ERROR: ' + err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    dbg('ERROR: ' + message);
     app.innerHTML = `
       <div class="text-center py-10 opacity-70 text-sm">
-        Erro ao carregar bookmarks.<br>
-        Verifique permissões em brave://extensions
-        <pre class="mt-3 p-3 bg-black/30 rounded text-error text-left text-xs max-h-48 overflow-auto whitespace-pre-wrap">${esc(err.message)}\n\n${esc(getLog().join('\n'))}</pre>
+        ${esc(t('loadErrorTitle'))}<br>
+        ${esc(t('loadErrorHint'))}
+        <pre class="mt-3 p-3 bg-black/30 rounded text-error text-left text-xs max-h-48 overflow-auto whitespace-pre-wrap">${esc(message)}\n\n${esc(getLog().join('\n'))}</pre>
       </div>
     `;
   }
@@ -577,29 +581,30 @@ export async function init() {
 // ============================================================
 // EVENT WIRING
 // ============================================================
-export function wireEvents() {
-  // Delegated card click + actions
-  document.getElementById('app').addEventListener('click', (e) => {
-    const editBtn = e.target.closest('.btn-edit');
+export function wireEvents(): void {
+  // Clique delegado em cards + ações
+  document.getElementById('app')!.addEventListener('click', (e) => {
+    const target = e.target as Element;
+    const editBtn = target.closest('.btn-edit');
     if (editBtn) {
       e.preventDefault(); e.stopPropagation();
-      editBookmark(editBtn.getAttribute('data-id'), editBtn.getAttribute('data-title'));
+      editBookmark(editBtn.getAttribute('data-id') || '', editBtn.getAttribute('data-title') || '');
       return;
     }
-    const delBtn = e.target.closest('.btn-del');
+    const delBtn = target.closest('.btn-del');
     if (delBtn) {
       e.preventDefault(); e.stopPropagation();
-      deleteBookmark(delBtn.getAttribute('data-id'), delBtn.getAttribute('data-title'));
+      deleteBookmark(delBtn.getAttribute('data-id') || '', delBtn.getAttribute('data-title') || '');
       return;
     }
-    const labelEl = e.target.closest('.bd-group-label[data-section-id]');
+    const labelEl = target.closest<HTMLElement>('.bd-group-label[data-section-id]');
     if (labelEl && labelEl.getAttribute('contenteditable') !== 'true') {
       console.log('[BD-CLICK] label click -> startRename', { sectionId: labelEl.getAttribute('data-section-id') });
       e.preventDefault(); e.stopPropagation();
       startRenameSection(labelEl);
       return;
     }
-    const card = e.target.closest('.dial-wrap[data-href]');
+    const card = target.closest('.dial-wrap[data-href]');
     if (card) {
       const href = card.getAttribute('data-href');
       if (!href) return;
@@ -613,27 +618,28 @@ export function wireEvents() {
     }
   });
 
-  document.getElementById('btn-shuffle').addEventListener('click', () => {
-    document.getElementById('search').value = '';
+  document.getElementById('btn-shuffle')!.addEventListener('click', () => {
+    (document.getElementById('search') as HTMLInputElement).value = '';
     renderAll();
   });
 
-  document.getElementById('btn-settings').addEventListener('click', () => openSectionsModal());
+  document.getElementById('btn-settings')!.addEventListener('click', () => openSectionsModal());
 
-  let debounceTimer;
-  document.getElementById('search').addEventListener('input', (e) => {
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  document.getElementById('search')!.addEventListener('input', (e) => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => renderSearch(e.target.value), 200);
+    debounceTimer = setTimeout(() => renderSearch((e.target as HTMLInputElement).value), 200);
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+    const search = document.getElementById('search') as HTMLInputElement;
+    if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
       e.preventDefault();
-      document.getElementById('search').focus();
+      search.focus();
     }
     if (e.key === 'Escape') {
-      document.getElementById('search').value = '';
-      document.getElementById('search').blur();
+      search.value = '';
+      search.blur();
       renderAll();
     }
   });
@@ -642,12 +648,12 @@ export function wireEvents() {
 // ============================================================
 // HIDE BRAVE'S INJECTED FOOTER
 // ============================================================
-export function setupBraveFooterHiding() {
-  function hideBraveFooter() {
+export function setupBraveFooterHiding(): void {
+  function hideBraveFooter(): void {
     const known = ['app', 'stats', 'search', 'btn-shuffle', 'btn-settings'];
     const bodyChildren = document.body.children;
     for (let i = 0; i < bodyChildren.length; i++) {
-      const el = bodyChildren[i];
+      const el = bodyChildren[i] as HTMLElement;
       const tag = el.tagName.toLowerCase();
       if (tag === 'script' || tag === 'link' || tag === 'style') continue;
       if (el.classList.contains('header') || el.id === 'app') continue;

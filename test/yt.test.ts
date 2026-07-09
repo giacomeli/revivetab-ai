@@ -1,6 +1,6 @@
-// test/yt.test.js — npm test
+// test/yt.test.ts — npm test
 import { describe, it, expect } from 'vitest';
-import { ytId } from '../src/yt.js';
+import { ytId } from '../src/services/yt';
 
 describe('ytId', () => {
   it('watch?v=', () => expect(ytId('https://www.youtube.com/watch?v=dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ'));

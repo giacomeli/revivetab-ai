@@ -1,13 +1,16 @@
-// test/ai.test.js — npm test
+// test/ai.test.ts — npm test
 import { describe, it, expect } from 'vitest';
-import { buildClassifyPayload, parseAssignments } from '../src/ai-client.js';
-import { chunk, selectScope, organize, computePreview } from '../src/ai-organize.js';
+import { buildClassifyPayload, parseAssignments } from '../src/services/ai-client';
+import { chunk, selectScope, organize, computePreview } from '../src/services/ai-organize';
+import type { AiConfig, Assignments, OrganizeProgress, Section } from '../src/types';
 
-const SECTIONS = [
-  { id: 'study', label: 'O que estudar hoje' },
-  { id: 'watch', label: 'O que assistir hoje' },
-  { id: 'inbox', label: 'Não categorizado' },
+const SECTIONS: Section[] = [
+  { id: 'study', label: 'O que estudar hoje', icon: 'book-open', color: '#4fc3f7', order: 0 },
+  { id: 'watch', label: 'O que assistir hoje', icon: 'video', color: '#ef5350', order: 1 },
+  { id: 'inbox', label: 'Não categorizado', icon: 'inbox', color: '#888888', order: 999, builtin: true },
 ];
+
+const CONFIG = {} as AiConfig;
 
 const BOOKMARKS = [
   { id: 'b1', title: 'React docs', url: 'https://react.dev', folderList: ['Dev'] },
@@ -63,11 +66,12 @@ describe('parseAssignments', () => {
   });
 
   it('JSON malformado lança erro', () => {
-    expect(() => parseAssignments('nem json', sectionIds, bookmarkIds)).toThrow(/JSON/);
+    // Sem chrome.i18n (ambiente de teste), t() devolve a própria chave.
+    expect(() => parseAssignments('nem json', sectionIds, bookmarkIds)).toThrow(/JSON/i);
   });
 
   it('sem campo assignments lança erro', () => {
-    expect(() => parseAssignments('{"resultado":{}}', sectionIds, bookmarkIds)).toThrow(/assignments/);
+    expect(() => parseAssignments('{"resultado":{}}', sectionIds, bookmarkIds)).toThrow(/assignments/i);
   });
 });
 
@@ -94,13 +98,14 @@ describe('selectScope', () => {
 
 describe('organize', () => {
   const bookmarks = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
-  const config = {};
+  type MiniBookmark = { id: string };
 
   it('classifica todos os lotes e reporta progresso', async () => {
-    const progress = [];
+    const progress: OrganizeProgress[] = [];
     const r = await organize({
-      bookmarks, sections: SECTIONS, config, batchSize: 2,
-      classifyFn: async (cfg, batch) => Object.fromEntries(batch.map((b) => [b.id, 'study'])),
+      bookmarks, sections: SECTIONS, config: CONFIG, batchSize: 2,
+      classifyFn: async (_cfg: AiConfig, batch: MiniBookmark[]): Promise<Assignments> =>
+        Object.fromEntries(batch.map((b) => [b.id, 'study'])),
       onProgress: (p) => progress.push(p),
     });
     expect(r.assignments).toEqual({ a: 'study', b: 'study', c: 'study', d: 'study' });
@@ -113,8 +118,8 @@ describe('organize', () => {
   it('retry recupera falha transitória', async () => {
     let calls = 0;
     const r = await organize({
-      bookmarks: [{ id: 'a' }], sections: SECTIONS, config, batchSize: 1,
-      classifyFn: async (cfg, batch) => {
+      bookmarks: [{ id: 'a' }], sections: SECTIONS, config: CONFIG, batchSize: 1,
+      classifyFn: async (): Promise<Assignments> => {
         calls++;
         if (calls === 1) throw new Error('falha transitoria');
         return { a: 'watch' };
@@ -127,8 +132,8 @@ describe('organize', () => {
 
   it('falha dupla marca o lote como falho e segue', async () => {
     const r = await organize({
-      bookmarks, sections: SECTIONS, config, batchSize: 2,
-      classifyFn: async (cfg, batch) => {
+      bookmarks, sections: SECTIONS, config: CONFIG, batchSize: 2,
+      classifyFn: async (_cfg: AiConfig, batch: MiniBookmark[]): Promise<Assignments> => {
         if (batch[0].id === 'a') throw new Error('sempre falha');
         return Object.fromEntries(batch.map((b) => [b.id, 'study']));
       },
@@ -141,8 +146,9 @@ describe('organize', () => {
   it('cancelamento preserva o já classificado', async () => {
     const controller = new AbortController();
     const r = await organize({
-      bookmarks, sections: SECTIONS, config, batchSize: 1, signal: controller.signal,
-      classifyFn: async (cfg, batch) => Object.fromEntries(batch.map((b) => [b.id, 'study'])),
+      bookmarks, sections: SECTIONS, config: CONFIG, batchSize: 1, signal: controller.signal,
+      classifyFn: async (_cfg: AiConfig, batch: MiniBookmark[]): Promise<Assignments> =>
+        Object.fromEntries(batch.map((b) => [b.id, 'study'])),
       onProgress: (p) => { if (p.batchesDone === 2) controller.abort(); },
     });
     expect(r.cancelled).toBe(true);

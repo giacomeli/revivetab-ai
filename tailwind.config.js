@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,html}'],
+  content: ['./index.html', './src/**/*.{js,ts,html}'],
   theme: {
     extend: {
       colors: {
@@ -26,7 +26,7 @@ export default {
   daisyui: {
     themes: [
       {
-        'bookmark-dial': {
+        'revivetab': {
           'primary':         '#4fc3f7',
           'primary-content': '#0c1222',
           'secondary':       '#ab47bc',
@@ -48,7 +48,7 @@ export default {
         },
       },
     ],
-    darkTheme: 'bookmark-dial',
+    darkTheme: 'revivetab',
     base: true,
     styled: true,
     utils: true,
