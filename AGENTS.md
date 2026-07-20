@@ -42,7 +42,7 @@ registra `renderAll` via `registerRenderer()` (padrão existente).
 
 | Camada | Módulo | Responsabilidade |
 | --- | --- | --- |
-| raiz | `main.ts` | Entry point: importa styles, chama `setupBraveFooterHiding`, `wireEvents`, `init` |
+| raiz | `main.ts` | Entry point: importa styles, chama `applyTheme` + `watchSystemTheme`, `setupBraveFooterHiding`, `wireEvents`, `init` |
 | raiz | `types.ts` | Tipos de domínio (`Bookmark`, `Section`, `Membership`, `AiConfig`, `TreeNode`...) |
 | raiz | `state.ts` | `STATE` mutável compartilhado + `dbg()` + instrumentação (`timed`, `timedAsync`, `tstamp`) |
 | assets | `assets/icons.ts` | SVGs Lucide embutidos + `iconSVG(name, size)` |
@@ -51,6 +51,7 @@ registra `renderAll` via `registerRenderer()` (padrão existente).
 | data | `data/bookmarks.ts` | Adaptador de `chrome.bookmarks`: `getTree`, `updateTitle`, `removeBookmark`, listeners — única porta para essa API |
 | services | `services/sections.ts` | `DEFAULT_SECTIONS`, `SEED_RULES` genérico, `SEED_VERSION`, funções puras de categorização |
 | services | `services/tree.ts` | Módulo puro: `walk` e `collectBookmarks` (árvore do browser -> lista flat) |
+| services | `services/theme.ts` | Resolução e persistência do tema (`bd:theme` no localStorage): `resolveTheme` puro, `applyTheme`, `watchSystemTheme` |
 | services | `services/yt.ts` | Módulo puro: `ytId(url)` — detecção de vídeo do YouTube |
 | services | `services/ai-client.ts` | Cliente OpenAI-compatible (DeepSeek/OpenRouter): payload/parse puros + fetch |
 | services | `services/ai-organize.ts` | Orquestração da classificação por IA: chunking, retry, cancelamento, diff |
@@ -148,11 +149,22 @@ UI em três idiomas via `chrome.i18n` nativo: catálogos em `_locales/{en,es,pt_
 
 ### Styling
 
-- Tema daisyUI custom `revivetab` (dark, gradient índigo/roxo) definido em `tailwind.config.js` — cores da UI mudam lá. O nome do tema aparece também no `data-theme` do `index.html`; mudar um exige mudar o outro.
+- Três temas daisyUI: `light` e `dark` stock + `revivetab` (clássico, custom em
+  `tailwind.config.js` — o objeto de cores não muda sem redesign da marca). O tema efetivo é
+  resolvido por `services/theme.ts` (preferência `auto`/`light`/`dark`/`revivetab` na chave
+  `bd:theme` do **localStorage** — não `chrome.storage`; default `auto` segue
+  `prefers-color-scheme`) e aplicado em `data-theme` no `<html>`. `public/theme-init.js`
+  (script clássico no `<head>`; CSP do MV3 bloqueia inline) aplica o tema antes do primeiro
+  paint e duplica a resolução mínima — mudou um, mudou o outro. O gradiente da marca é escopado
+  a `[data-theme='revivetab']` em `styles.css`; nos demais temas o fundo é `bg-base-200`.
+  Seletor de tema: bloco "Tema" no modal Gerenciar seções.
+- Novas classes de cor em templates usam tokens semânticos do daisyUI (`base-*`, `primary`...).
+  Preto/branco fixos são exceções deliberadas: badge do YouTube, backdrop de modal, letterbox
+  do player.
 - CSS custom em `src/assets/styles.css` cobre só: gradient de fundo, visuais de DnD e breakpoint responsivo do carousel. O resto é utility class no template.
 - O `content` do `tailwind.config.js` precisa incluir `./src/**/*.{js,ts,html}` — sem o `ts` no glob, o Tailwind purga as classes usadas nos templates e o CSS encolhe de ~70 kB para ~18 kB (sintoma de UI quebrada).
 - **Classes prefixadas `bd-` e `dial-` são seletores estruturais usados pelo JS** (DnD, busca, lazy-load, rename inline). Não remover/renomear sem buscar referências em JS. Exemplos: `.dial-wrap`, `.dial-title`, `.bd-group`, `.bd-group-head`, `.bd-group-label`, `.bd-carousel`, `.bd-carousel-track`, `.bd-carousel-clone`, `.bd-lazy-thumb`, `.bd-modal-overlay`. Classes Tailwind/daisyUI são puramente estilo e podem ser editadas livremente.
 
 ### Testes
 
-`npm test` roda os quatro arquivos de `test/*.test.ts` (sections, tree, yt, ai) — todos sobre funções puras de `services/`. UI/DOM é verificada manualmente carregando a extensão (não há ambiente de teste com `chrome.*` mockado). Rodar `npm run typecheck` junto: o Vite transpila TS sem checar tipos, então só o tsc pega erro de tipo.
+`npm test` roda os cinco arquivos de `test/*.test.ts` (sections, tree, yt, ai, theme) — todos sobre funções puras de `services/`. UI/DOM é verificada manualmente carregando a extensão (não há ambiente de teste com `chrome.*` mockado). Rodar `npm run typecheck` junto: o Vite transpila TS sem checar tipos, então só o tsc pega erro de tipo.

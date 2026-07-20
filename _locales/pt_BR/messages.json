@@ -70,6 +70,12 @@
     "placeholders": { "msg": { "content": "$1" } }
   },
 
+  "theme": { "message": "Tema" },
+  "themeAuto": { "message": "Automático" },
+  "themeLight": { "message": "Claro" },
+  "themeDark": { "message": "Escuro" },
+  "themeClassic": { "message": "ReviveTab (clássico)" },
+
   "aiProvider": { "message": "Provider" },
   "aiModel": { "message": "Modelo" },
   "aiModelPlaceholder": { "message": "ex: deepseek-v4-flash" },

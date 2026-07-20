@@ -1,6 +1,6 @@
 {
   "name": "revivetab-ai",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "ReviveTab AI — transforme favoritos esquecidos em um Speed Dial inteligente com IA na new tab.",
   "type": "module",
   "private": true,

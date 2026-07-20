@@ -9,10 +9,15 @@ html, body {
   min-height: 100vh;
 }
 body {
-  @apply bg-bd-gradient text-base-content;
-  background-attachment: fixed;
+  @apply bg-base-200 text-base-content;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   padding: 28px 36px 60px;
+}
+
+/* O gradiente índigo/roxo da marca só existe no tema clássico. */
+[data-theme='revivetab'] body {
+  @apply bg-bd-gradient;
+  background-attachment: fixed;
 }
 
 /* ============================================================
@@ -25,14 +30,13 @@ body {
    :not(.bd-dragging) reset below ensures that the moment we remove that
    class, all indicators disappear — even if .bd-drop-target leaks. */
 body.bd-dragging .bd-group .bd-group-head {
-  outline: 2px dashed rgba(255, 255, 255, 0.18);
+  @apply outline-dashed outline-2 outline-base-content/20;
   outline-offset: 4px;
   border-radius: 6px;
   transition: outline 0.12s ease, background 0.12s ease;
 }
 body.bd-dragging .bd-group.bd-drop-target .bd-group-head {
-  outline: 2px solid rgba(120, 200, 255, 0.85);
-  background: rgba(120, 200, 255, 0.08);
+  @apply outline outline-2 outline-primary/80 bg-primary/10;
 }
 body.bd-dragging .bd-empty-section {
   @apply border-primary/50 text-base-content/70;

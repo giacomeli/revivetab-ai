@@ -25,6 +25,8 @@ export default {
   plugins: [require('daisyui')],
   daisyui: {
     themes: [
+      'light',
+      'dark',
       {
         'revivetab': {
           'primary':         '#4fc3f7',
@@ -48,7 +50,7 @@ export default {
         },
       },
     ],
-    darkTheme: 'revivetab',
+    darkTheme: 'dark',
     base: true,
     styled: true,
     utils: true,

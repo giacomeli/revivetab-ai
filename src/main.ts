@@ -1,5 +1,6 @@
 // main.ts — entry point carregado pelo index.html
 import './assets/styles.css';
+import { applyTheme, watchSystemTheme } from './services/theme';
 import { t, uiLanguage } from './services/i18n';
 import { init, wireEvents, setupBraveFooterHiding } from './ui/dial';
 
@@ -18,6 +19,8 @@ function applyStaticI18n(): void {
   });
 }
 
+applyTheme();
+watchSystemTheme();
 applyStaticI18n();
 setupBraveFooterHiding();
 wireEvents();

@@ -7,6 +7,8 @@ import { showModal, closeModal } from './modal';
 import { iconSVG, iconNames } from '../assets/icons';
 import { saveSections, saveMembership, exportBackup } from '../data/storage';
 import { slugify, uniqueSectionId, reSeedAll } from '../services/sections';
+import { getThemePref, setThemePref, normalizeThemePref } from '../services/theme';
+import type { ThemePref } from '../services/theme';
 import { renderAiTab } from './modal-ai';
 import { t } from '../services/i18n';
 import type { Section } from '../types';
@@ -15,6 +17,28 @@ const COLOR_PALETTE = [
   '#4fc3f7', '#ef5350', '#ff9800', '#66bb6a', '#ce93d8',
   '#ab47bc', '#ffa726', '#26c6da', '#ffd54f', '#8d6e63',
 ];
+
+const THEME_OPTIONS: { pref: ThemePref; labelKey: string }[] = [
+  { pref: 'auto',      labelKey: 'themeAuto' },
+  { pref: 'light',     labelKey: 'themeLight' },
+  { pref: 'dark',      labelKey: 'themeDark' },
+  { pref: 'revivetab', labelKey: 'themeClassic' },
+];
+
+function _themeBlockHTML(): string {
+  const current = getThemePref();
+  const buttons = THEME_OPTIONS.map(({ pref, labelKey }) => {
+    const active = pref === current ? ' btn-active' : '';
+    return `<button type="button" class="bd-theme-opt btn btn-sm join-item flex-1${active}"
+            data-theme-pref="${pref}">${esc(t(labelKey))}</button>`;
+  }).join('');
+  return `
+    <div class="bd-theme-block mb-4">
+      <label class="block text-xs uppercase tracking-wider opacity-60 mb-1.5">${esc(t('theme'))}</label>
+      <div class="join w-full">${buttons}</div>
+    </div>
+  `;
+}
 
 type RenderFn = () => void;
 let _renderAll: RenderFn | null = null;
@@ -43,6 +67,7 @@ export function openSectionsModal(): void {
       </div>
       <div class="bd-tab-panel flex flex-col" data-panel="sections">
         <div class="px-6 py-4 overflow-auto flex-1 max-h-[60vh]">
+          ${_themeBlockHTML()}
           <button class="btn btn-outline btn-block btn-sm mb-3 bd-add-section">
             ${iconSVG('plus', 16)} ${esc(t('newSection'))}
           </button>
@@ -76,6 +101,15 @@ export function openSectionsModal(): void {
       overlay.querySelectorAll<HTMLElement>('.bd-modal-tab').forEach((t) => t.classList.toggle('tab-active', t === tab));
       overlay.querySelectorAll<HTMLElement>('.bd-tab-panel').forEach((p) => {
         p.classList.toggle('hidden', p.getAttribute('data-panel') !== target);
+      });
+    });
+  });
+
+  overlay.querySelectorAll<HTMLElement>('.bd-theme-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setThemePref(normalizeThemePref(btn.getAttribute('data-theme-pref')));
+      overlay.querySelectorAll<HTMLElement>('.bd-theme-opt').forEach((b) => {
+        b.classList.toggle('btn-active', b === btn);
       });
     });
   });
@@ -150,7 +184,7 @@ function _formHTML(values: SectionFormValues, submitLabel: string): string {
   }).join('');
 
   const colorPalette = COLOR_PALETTE.map((c) => {
-    const sel = (c === values.color) ? 'border-white scale-110' : 'border-base-content/10';
+    const sel = (c === values.color) ? 'border-base-content scale-110' : 'border-base-content/10';
     return `<button type="button" class="bd-color-pick w-6 h-6 rounded-full border-2 ${sel} transition"
             data-color="${esc(c)}" style="background:${esc(c)}" title="${esc(c)}"></button>`;
   }).join('');
@@ -162,7 +196,7 @@ function _formHTML(values: SectionFormValues, submitLabel: string): string {
              name="label" value="${esc(values.label || '')}" maxlength="40"/>
 
       <label class="block text-xs uppercase tracking-wider opacity-60 mb-1.5 mt-3">${esc(t('formIcon'))}</label>
-      <div class="bd-icon-grid grid grid-cols-8 gap-1 p-1 rounded bg-black/20 max-h-44 overflow-y-auto">
+      <div class="bd-icon-grid grid grid-cols-8 gap-1 p-1 rounded bg-base-content/10 max-h-44 overflow-y-auto">
         ${iconGrid}
       </div>
 
@@ -185,7 +219,7 @@ function _wireForm(form: HTMLElement, submitFn: (values: SectionFormValues) => P
   const labelInput = form.querySelector<HTMLInputElement>('input[name="label"]')!;
   const colorCustom = form.querySelector<HTMLInputElement>('.bd-color-custom')!;
   const iconSelected = form.querySelector<HTMLElement>('.bd-icon-pick.bg-primary\\/20');
-  const colorSelected = form.querySelector<HTMLElement>('.bd-color-pick.border-white');
+  const colorSelected = form.querySelector<HTMLElement>('.bd-color-pick.border-base-content');
   const current: SectionFormValues = {
     label: labelInput.value,
     icon: iconSelected ? iconSelected.getAttribute('data-icon')! : 'bookmark',
@@ -207,10 +241,10 @@ function _wireForm(form: HTMLElement, submitFn: (values: SectionFormValues) => P
   form.querySelectorAll<HTMLElement>('.bd-color-pick').forEach((btn) => {
     btn.addEventListener('click', () => {
       form.querySelectorAll<HTMLElement>('.bd-color-pick').forEach((b) => {
-        b.classList.remove('border-white', 'scale-110');
+        b.classList.remove('border-base-content', 'scale-110');
         b.classList.add('border-base-content/10');
       });
-      btn.classList.add('border-white', 'scale-110');
+      btn.classList.add('border-base-content', 'scale-110');
       btn.classList.remove('border-base-content/10');
       current.color = btn.getAttribute('data-color')!;
       colorCustom.value = current.color;
@@ -219,7 +253,7 @@ function _wireForm(form: HTMLElement, submitFn: (values: SectionFormValues) => P
   colorCustom.addEventListener('input', (e) => {
     current.color = (e.target as HTMLInputElement).value;
     form.querySelectorAll<HTMLElement>('.bd-color-pick').forEach((b) => {
-      b.classList.remove('border-white', 'scale-110');
+      b.classList.remove('border-base-content', 'scale-110');
       b.classList.add('border-base-content/10');
     });
   });

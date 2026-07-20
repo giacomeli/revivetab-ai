@@ -108,16 +108,16 @@ function cardHTML(bm: Bookmark): string {
       alt="" />`;
   }
   const placeholder = `
-    <div class="bd-thumb-placeholder absolute inset-0 flex items-center justify-center bg-black/15">
-      <div class="bd-thumb-spinner w-5 h-5 rounded-full border-2 border-white/10 border-t-white/40 animate-spin-slow"></div>
+    <div class="bd-thumb-placeholder absolute inset-0 flex items-center justify-center bg-base-content/10">
+      <div class="bd-thumb-spinner w-5 h-5 rounded-full border-2 border-base-content/20 border-t-base-content/60 animate-spin-slow"></div>
     </div>`;
   const actions = `
     <div class="dial-actions absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
-      <button class="btn-edit btn btn-xs btn-square bg-white/10 hover:bg-info/50 border-0 backdrop-blur"
+      <button class="btn-edit btn btn-xs btn-square bg-base-content/10 hover:bg-info/50 border-0 backdrop-blur"
               data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('editTitleTooltip'))}" aria-label="${esc(t('edit'))}">
         ${iconSVG('pencil', 14)}
       </button>
-      <button class="btn-del btn btn-xs btn-square bg-white/10 hover:bg-error/60 border-0 backdrop-blur"
+      <button class="btn-del btn btn-xs btn-square bg-base-content/10 hover:bg-error/60 border-0 backdrop-blur"
               data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('deleteBookmark'))}" aria-label="${esc(t('delete'))}">
         ${iconSVG('x', 14)}
       </button>
@@ -133,7 +133,7 @@ function cardHTML(bm: Bookmark): string {
     <div class="dial-wrap group/card relative flex flex-col overflow-hidden rounded-2xl bg-base-content/5 hover:bg-base-content/10 border border-base-content/5 hover:border-base-content/15 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer flex-none w-[170px] min-w-[170px]"
          data-bm-id="${esc(bm.id)}" data-href="${esc(bm.url)}" title="${esc(bm.title)}">
       ${actions}
-      <div class="bd-card-thumb relative h-[105px] flex items-center justify-center overflow-hidden bg-black/25">
+      <div class="bd-card-thumb relative h-[105px] flex items-center justify-center overflow-hidden bg-base-content/10">
         ${placeholder}${thumb}
       </div>
       <div class="bd-card-body flex flex-col gap-0.5 px-3 py-2.5">
@@ -572,7 +572,7 @@ export async function init(): Promise<void> {
       <div class="text-center py-10 opacity-70 text-sm">
         ${esc(t('loadErrorTitle'))}<br>
         ${esc(t('loadErrorHint'))}
-        <pre class="mt-3 p-3 bg-black/30 rounded text-error text-left text-xs max-h-48 overflow-auto whitespace-pre-wrap">${esc(message)}\n\n${esc(getLog().join('\n'))}</pre>
+        <pre class="mt-3 p-3 bg-base-content/10 rounded text-error text-left text-xs max-h-48 overflow-auto whitespace-pre-wrap">${esc(message)}\n\n${esc(getLog().join('\n'))}</pre>
       </div>
     `;
   }

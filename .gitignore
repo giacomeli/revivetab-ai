@@ -15,3 +15,5 @@ specs/
 
 # capturas locais e assets de loja (contem dados pessoais de bookmarks)
 screenshots/
+
+.superpowers/
