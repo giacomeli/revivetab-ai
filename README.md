@@ -2,13 +2,10 @@
   <img src="promo-assets/revivetab-ai-readme-banner-1280x640.png" alt="ReviveTab AI — Chrome extension that replaces the new tab with an AI-organized Speed Dial for your bookmarks"/>
 </p>
 
-<h1 align="center">ReviveTab AI</h1>
+<h1>ReviveTab AI</h1>
 
-<p align="center"><strong>Don't let your bookmarks die in disarray.</strong></p>
+<p><strong>Don't let your bookmarks die in disarray.</strong></p>
 
-<p align="center">Store title: <em>ReviveTab AI: Bookmarks & Speed Dial</em></p>
-
----
 
 Do you also pile up hundreds of bookmarks that fall into oblivion and never get opened again?
 ReviveTab AI replaces the New Tab page with a dynamic, intelligent Speed Dial: AI organizes your
@@ -51,6 +48,22 @@ npm run build            # production build
 npm run typecheck        # tsc --noEmit (strict)
 npm test                 # Vitest suite
 ```
+
+## Contributing
+
+Contributions are welcome — bug reports, feature ideas, code and translations.
+
+- **Found a bug or have an idea?** [Open an issue](https://github.com/giacomeli/revivetab-ai/issues)
+  describing the behavior (and steps to reproduce, for bugs).
+- **Code:** fork the repo, create a branch, and open a pull request. Before submitting, make sure
+  `npm run typecheck` and `npm test` pass. Follow the layered architecture
+  (`ui/` -> `services/` -> `data/`) — dependencies only point downwards.
+- **Translations:** the extension ships in English, Spanish and Brazilian Portuguese. Adding a new
+  language is a great first contribution: copy `_locales/en/` to your locale folder (e.g.
+  `_locales/fr/`) and translate the strings.
+- **One invariant to respect:** the user's bookmark folder structure is never modified. The only
+  writes to `chrome.bookmarks` are rename and delete, always triggered by an explicit user action —
+  pull requests that break this rule won't be merged.
 
 ## Privacy
 
