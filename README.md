@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/icon128.png" alt="ReviveTab AI" width="96" height="96"/>
+  <img src="promo-assets/revivetab-ai-readme-banner-1280x640.png" alt="ReviveTab AI — Chrome extension that replaces the new tab with an AI-organized Speed Dial for your bookmarks"/>
 </p>
 
 <h1 align="center">ReviveTab AI</h1>
