@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_appName__",
   "short_name": "__MSG_appShortName__",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "description": "__MSG_appDesc__",
   "default_locale": "en",
   "permissions": [
@@ -17,6 +17,7 @@
     "https://api.deepseek.com/*",
     "https://openrouter.ai/*"
   ],
+  "optional_host_permissions": ["https://*/*"],
   "chrome_url_overrides": {
     "newtab": "index.html"
   },

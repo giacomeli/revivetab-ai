@@ -1,6 +1,6 @@
 # Política de Privacidade — ReviveTab AI / Privacy Policy — ReviveTab AI
 
-Vigência / Effective date: 08-07-2026
+Vigência / Effective date: 09-11-2026
 Contato / Contact: giacomeli.dev@gmail.com
 
 Português abaixo; English version at the end.
@@ -38,12 +38,19 @@ políticas do YouTube/Google. Uma regra local de rede (declarativeNetRequest) de
 `Referer` apenas nessas requisições de embed, exigência técnica do player — nenhum outro tráfego é
 observado ou modificado.
 
+### Leitor RSS
+
+Ao adicionar uma fonte, você pode autorizar a extensão a acessar o domínio indicado. A nova guia
+consulta as fontes cadastradas diretamente, sem cookies. Cada servidor pode receber seu endereço IP
+como parte da conexão. As URLs das fontes e os últimos artigos obtidos ficam no armazenamento local
+do navegador. Remover uma fonte apaga seu cache e encerra futuras consultas a ela. Você pode revogar
+o acesso ao site nas configurações da extensão no navegador.
+
 ### O que a extensão NÃO faz
 
 - Não coleta analytics nem telemetria.
 - Não usa cookies ou rastreadores.
-- Não vende, compartilha ou transmite seus dados a terceiros (exceto o envio à IA descrito acima,
-  sob seu comando e com sua chave).
+- Não vende seus dados. As conexões a serviços de terceiros estão descritas nas seções acima.
 - Não acessa seu histórico de navegação.
 
 ### Remoção de dados
@@ -72,6 +79,11 @@ bookmarks, with optional AI-powered organization.
 - **YouTube player**: clicking a video bookmark loads YouTube's embedded player (YouTube/Google
   policies apply). A local declarativeNetRequest rule sets the `Referer` header only on those embed
   requests, a technical requirement of the player.
+- **RSS reader**: when you add a source, you can grant access to its domain. The new tab fetches
+  saved sources directly without cookies. Each source server may receive your IP address as part of
+  the connection. Source URLs and recently fetched articles are stored locally. Removing a source
+  clears its cache and stops future requests to it. You can revoke site access in your browser's
+  extension settings.
 - **No analytics, no trackers, no data sales, no browsing-history access.**
 - **Data removal**: uninstalling the extension deletes all data it stored.
 

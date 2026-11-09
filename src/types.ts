@@ -95,3 +95,22 @@ export interface InitialBackup {
   savedAt: string;
   tree: TreeNode[];
 }
+
+export type RssFetchError = 'permission' | 'invalid' | 'network';
+
+export interface RssArticle {
+  title: string;
+  excerpt?: string;
+  url: string;
+  publishedAt: number | null;
+}
+
+export interface RssSource {
+  id: string;
+  url: string;
+  title: string;
+  color?: string;
+  articles: RssArticle[];
+  checkedAt: number;
+  error?: RssFetchError;
+}

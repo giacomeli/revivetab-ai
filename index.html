@@ -6,23 +6,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>New Tab</title>
 </head>
-<body>
+<body class="px-4 pb-12 pt-4 sm:px-7 sm:pt-6 lg:px-9">
 
-<div class="header flex items-center justify-end mb-7">
-  <div class="flex gap-2 items-center">
+<header id="dashboard-header" class="mx-auto mb-6 grid max-w-[1600px] grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 border-b border-base-content/10 pb-4 sm:grid-cols-[1fr_minmax(12rem,30rem)_1fr]">
+  <div class="col-start-1 row-start-1 flex min-w-0 items-center gap-2.5">
+    <img src="/icons/icon48.png" alt="" width="30" height="30" class="shrink-0 rounded-lg" />
+    <span class="truncate text-base font-semibold tracking-tight" data-i18n-text="appShortName">ReviveTab AI</span>
+  </div>
+  <div role="search" class="relative col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1">
+    <span id="search-icon" aria-hidden="true" class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-base-content/60"></span>
     <input
       id="search"
-      type="text"
+      type="search"
       data-i18n-placeholder="searchPlaceholder"
+      data-i18n-aria-label="searchPlaceholder"
+      aria-keyshortcuts="/"
       autocomplete="off"
-      class="input input-bordered input-sm w-80 bg-base-content/5 border-base-content/10 focus:border-base-content/25 placeholder:text-base-content/40"
+      class="input input-bordered h-10 w-full border-base-content/15 bg-base-100 pl-10 pr-10 text-sm placeholder:text-base-content/60 focus:border-primary focus:outline-primary"
     />
-    <button id="btn-shuffle" class="btn btn-sm bg-base-content/5 border-base-content/10 hover:bg-base-content/15 hover:border-base-content/20" data-i18n-title="shuffle"></button>
-    <button id="btn-settings" class="btn btn-sm btn-square bg-base-content/5 border-base-content/10 hover:bg-base-content/15 hover:border-base-content/20" data-i18n-title="manageSections" data-i18n-aria-label="manageSections"></button>
+    <kbd aria-hidden="true" class="pointer-events-none absolute inset-y-2.5 right-3 flex items-center rounded border border-base-content/15 px-1.5 font-sans text-xs text-base-content/60">/</kbd>
   </div>
-</div>
+  <div class="col-start-2 row-start-1 flex items-center justify-end gap-2 sm:col-start-3">
+    <button type="button" id="btn-shuffle" class="btn btn-sm h-9 min-h-9 border-base-content/15 bg-base-100" data-i18n-title="shuffle" data-i18n-aria-label="shuffle"></button>
+    <button type="button" id="btn-settings" class="btn btn-sm btn-square h-9 min-h-9 w-9 border-base-content/15 bg-base-100" data-i18n-title="manageSections" data-i18n-aria-label="manageSections"></button>
+  </div>
+</header>
 
-<div id="app"></div>
+<main id="dashboard" class="mx-auto grid max-w-[1600px] grid-cols-1 items-start gap-x-6 gap-y-3 xl:grid-cols-[clamp(26rem,33vw,30rem)_minmax(0,1fr)]">
+  <section class="min-w-0 xl:col-start-2 xl:row-start-1" aria-labelledby="bookmarks-heading">
+    <h1 id="bookmarks-heading" class="sr-only" data-i18n-text="dashboardBookmarks"></h1>
+    <div class="mb-3 flex justify-end xl:hidden">
+      <a href="#rss-feed" class="link link-hover rounded text-sm font-medium text-base-content/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" data-i18n-text="rssHeading"></a>
+    </div>
+    <div id="app" class="grid min-w-0 gap-4"></div>
+  </section>
+  <aside id="rss-feed" tabindex="-1" class="min-w-0 scroll-mt-4 max-xl:mt-4 xl:col-start-1 xl:row-start-1"></aside>
+</main>
 
 <script type="module" src="/src/main.ts"></script>
 </body>
