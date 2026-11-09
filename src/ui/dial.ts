@@ -35,7 +35,7 @@ function clean(t: string): string {
 function esc(t: string): string {
   const d = document.createElement('div');
   d.textContent = t;
-  return d.innerHTML;
+  return d.innerHTML.replaceAll('"', '&quot;');
 }
 function shuffle<T>(a: T[]): T[] {
   const b = a.slice();
@@ -78,8 +78,6 @@ function groupByMembership(bookmarks: Bookmark[], membership: Membership, sectio
 // encontráveis pela busca. Principal knob de perf (initCarousels passava de
 // 570ms antes desse teto).
 const MAX_PER_SECTION = 50;
-const CARD_WIDTH_PX = 170;
-const CARD_GAP_PX = 10;
 
 // ============================================================
 // CARD HTML
@@ -97,7 +95,7 @@ function cardHTML(bm: Bookmark): string {
       data-src="https://img.youtube.com/vi/${yt}/mqdefault.jpg"
       data-fallback="${esc(favLg)}"
       data-initial="${initial}"
-      alt="" />
+      alt="" draggable="false" />
       <div class="bd-yt-play absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-red-600/85 flex items-center justify-center pointer-events-none">
         <span class="block w-0 h-0 ml-0.5 border-y-[7px] border-y-transparent border-l-[12px] border-l-white"></span>
       </div>`;
@@ -105,19 +103,19 @@ function cardHTML(bm: Bookmark): string {
     thumb = `<img class="bd-site-thumb bd-lazy-thumb absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 object-contain opacity-0 transition-opacity duration-300 rounded-xl drop-shadow"
       data-src="${esc(favLg)}"
       data-initial="${initial}"
-      alt="" />`;
+      alt="" draggable="false" />`;
   }
   const placeholder = `
     <div class="bd-thumb-placeholder absolute inset-0 flex items-center justify-center bg-base-content/10">
-      <div class="bd-thumb-spinner w-5 h-5 rounded-full border-2 border-base-content/20 border-t-base-content/60 animate-spin-slow"></div>
+      <div class="bd-thumb-spinner w-5 h-5 rounded-full border-2 border-base-content/20 border-t-base-content/60 motion-safe:animate-spin-slow"></div>
     </div>`;
   const actions = `
-    <div class="dial-actions absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
-      <button class="btn-edit btn btn-xs btn-square bg-base-content/10 hover:bg-info/50 border-0 backdrop-blur"
+    <div class="dial-actions pointer-events-none absolute top-1.5 right-1.5 z-10 flex gap-1 opacity-0 motion-safe:transition-opacity group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100">
+      <button type="button" class="btn-edit btn btn-xs btn-square border-base-content/15 bg-base-100/95 hover:bg-info"
               data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('editTitleTooltip'))}" aria-label="${esc(t('edit'))}">
         ${iconSVG('pencil', 14)}
       </button>
-      <button class="btn-del btn btn-xs btn-square bg-base-content/10 hover:bg-error/60 border-0 backdrop-blur"
+      <button type="button" class="btn-del btn btn-xs btn-square border-base-content/15 bg-base-100/95 hover:bg-error"
               data-id="${esc(bm.id)}" data-title="${esc(bm.title)}" title="${esc(t('deleteBookmark'))}" aria-label="${esc(t('delete'))}">
         ${iconSVG('x', 14)}
       </button>
@@ -130,19 +128,21 @@ function cardHTML(bm: Bookmark): string {
   // Classes de largura aplicadas aqui (no template) para evitar um loop
   // pós-render gigante adicionando-as por card no initCarousels.
   return `
-    <div class="dial-wrap group/card relative flex flex-col overflow-hidden rounded-2xl bg-base-content/5 hover:bg-base-content/10 border border-base-content/5 hover:border-base-content/15 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-card-hover cursor-pointer flex-none w-[170px] min-w-[170px]"
+    <div class="dial-wrap group/card relative flex w-[170px] min-w-[170px] flex-none flex-col overflow-hidden rounded-xl border border-base-content/10 bg-base-200 hover:border-base-content/25 motion-safe:transition-colors"
          data-bm-id="${esc(bm.id)}" data-href="${esc(bm.url)}" title="${esc(bm.title)}">
-      ${actions}
-      <div class="bd-card-thumb relative h-[105px] flex items-center justify-center overflow-hidden bg-base-content/10">
-        ${placeholder}${thumb}
-      </div>
-      <div class="bd-card-body flex flex-col gap-0.5 px-3 py-2.5">
-        ${breadcrumb}
-        <div class="dial-title text-[0.78rem] font-medium leading-snug line-clamp-2" data-bmid="${esc(bm.id)}">${esc(title)}</div>
-        <div class="bd-card-domain mt-auto flex items-center gap-1 text-[0.68rem] text-base-content/50">
-          <img src="${fav}" alt="" class="w-3 h-3 rounded-sm" onerror="this.style.display='none'"/>${esc(d)}
+      <a href="${esc(bm.url)}" draggable="false" aria-label="${esc(title)}" class="bd-bookmark-link flex flex-1 flex-col rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary">
+        <div class="bd-card-thumb relative h-[105px] flex items-center justify-center overflow-hidden bg-base-content/10">
+          ${placeholder}${thumb}
         </div>
-      </div>
+        <div class="bd-card-body flex flex-1 flex-col gap-0.5 px-3 py-2.5">
+          ${breadcrumb}
+          <div class="dial-title text-[0.78rem] font-semibold leading-snug line-clamp-2" data-bmid="${esc(bm.id)}">${esc(title)}</div>
+          <div class="bd-card-domain mt-auto flex items-center gap-1 pt-1 text-[0.68rem] text-base-content/65">
+            <img src="${fav}" alt="" draggable="false" class="h-3 w-3 shrink-0 rounded-sm" /><span class="truncate">${esc(d)}</span>
+          </div>
+        </div>
+      </a>
+      ${actions}
     </div>
   `;
 }
@@ -202,40 +202,46 @@ function sectionHTML(sec: Section, items: Bookmark[]): string {
   const pick = capped ? shuffle(items).slice(0, MAX_PER_SECTION) : shuffle(items);
   const cards = pick.map((bm) => cardHTML(bm)).join('');
   const iconHtml = iconSVG(sec.icon || 'bookmark', 18);
+  const sectionId = esc(sec.id);
+  const color = esc(sec.color || '#888');
   const countBadge = capped
-    ? `<span class="badge badge-sm badge-ghost ml-2 opacity-60" title="${esc(t('cappedBadgeTitle', [String(total), String(MAX_PER_SECTION)]))}">${total}/${MAX_PER_SECTION}</span>`
-    : (total > 0 ? `<span class="text-xs opacity-40 ml-2">${total}</span>` : '');
-  const headHtml = `
-    <div class="bd-group-head flex items-center gap-2.5 pl-1 mb-3.5">
-      <span class="bd-group-dot w-1.5 h-1.5 rounded-full" style="background:${esc(sec.color || '#888')}"></span>
-      <span class="bd-group-icon inline-flex items-center" style="color:${esc(sec.color || '#ccc')}">${iconHtml}</span>
-      <span class="bd-group-label text-sm font-medium opacity-90 cursor-text px-1 py-0.5 rounded hover:bg-base-content/5"
-            data-section-id="${esc(sec.id)}" tabindex="0" title="${esc(t('renameSectionHint'))}">${esc(sec.label)}</span>
-      ${countBadge}
-    </div>
-  `;
-  if (!items.length) {
-    return `
-      <section class="bd-group mb-8" data-section-id="${esc(sec.id)}">
-        ${headHtml}
-        <div class="bd-empty-section py-8 px-4 text-center text-base-content/40 text-xs border border-dashed border-base-content/10 rounded-lg mx-2">
-          ${esc(t('emptySectionHint'))}
-        </div>
-      </section>
-    `;
-  }
+    ? `<span class="badge badge-ghost badge-sm shrink-0 tabular-nums text-base-content/70" title="${esc(t('cappedBadgeTitle', [String(total), String(MAX_PER_SECTION)]))}">${total}/${MAX_PER_SECTION}</span>`
+    : `<span class="badge badge-ghost badge-sm shrink-0 tabular-nums text-base-content/70">${total}</span>`;
+  const carouselControls = items.length
+    ? `
+      <div class="bd-carousel-controls ml-auto hidden shrink-0 gap-1">
+        <button type="button" class="bd-carousel-arrow left btn btn-square btn-sm border-base-content/15 bg-base-200"
+                aria-label="${esc(t('carouselPrevious'))}" aria-controls="carousel-${sectionId}">
+          <span aria-hidden="true" class="text-lg leading-none">‹</span>
+        </button>
+        <button type="button" class="bd-carousel-arrow right btn btn-square btn-sm border-base-content/15 bg-base-200"
+                aria-label="${esc(t('carouselNext'))}" aria-controls="carousel-${sectionId}">
+          <span aria-hidden="true" class="text-lg leading-none">›</span>
+        </button>
+      </div>`
+    : '';
+  const content = items.length
+    ? `
+      <div class="bd-carousel min-w-0">
+        <div id="carousel-${sectionId}" class="bd-carousel-track flex gap-2.5 overflow-x-auto overscroll-x-contain py-0.5">${cards}</div>
+      </div>`
+    : `
+      <p class="bd-empty-section rounded-lg border border-dashed border-base-content/15 px-4 py-3 text-sm text-base-content/65">
+        ${esc(t('emptySectionHint'))}
+      </p>`;
   return `
-    <section class="bd-group mb-8" data-section-id="${esc(sec.id)}">
-      ${headHtml}
-      <div class="bd-carousel relative">
-        <button class="bd-carousel-arrow left btn btn-circle btn-sm absolute top-1/2 -translate-y-1/2 -left-1 z-10 opacity-0 transition-opacity bg-base-100/85 backdrop-blur border border-base-content/15 hover:bg-base-content/15">
-          <span class="text-lg leading-none">‹</span>
-        </button>
-        <div class="bd-carousel-track flex gap-2.5 overflow-x-hidden py-1 scroll-smooth">${cards}</div>
-        <button class="bd-carousel-arrow right btn btn-circle btn-sm absolute top-1/2 -translate-y-1/2 -right-1 z-10 opacity-0 transition-opacity bg-base-100/85 backdrop-blur border border-base-content/15 hover:bg-base-content/15">
-          <span class="text-lg leading-none">›</span>
-        </button>
-      </div>
+    <section class="bd-group min-w-0 rounded-2xl border border-base-content/10 bg-base-100 p-3 sm:p-4"
+             data-section-id="${sectionId}" aria-labelledby="section-${sectionId}">
+      <header class="bd-group-head mb-2.5 flex min-h-8 items-center gap-2">
+        <span class="bd-group-icon grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-base-content/5" aria-hidden="true" style="color:${color}">${iconHtml}</span>
+        <h2 id="section-${sectionId}" class="min-w-0 text-sm font-semibold sm:text-base">
+          <span class="bd-group-label block cursor-text truncate rounded px-1 py-0.5 hover:bg-base-content/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                data-section-id="${sectionId}" role="button" tabindex="0" title="${esc(t('renameSectionHint'))}">${esc(sec.label)}</span>
+        </h2>
+        ${countBadge}
+        ${carouselControls}
+      </header>
+      ${content}
     </section>
   `;
 }
@@ -246,6 +252,11 @@ function sectionHTML(sec: Section, items: Bookmark[]): string {
 let _renderCount = 0;
 
 export function renderAll(): void {
+  const search = document.querySelector<HTMLInputElement>('#search')!;
+  if (search.value.trim()) {
+    renderSearch(search.value);
+    return;
+  }
   _renderCount++;
   const start = performance.now();
   cleanupDragState('renderAll');
@@ -280,69 +291,47 @@ function initCarousels(): void {
 function setupCarousel(viewport: HTMLElement): void {
   const track = viewport.querySelector<HTMLElement>('.bd-carousel-track')!;
   const cards = Array.from(track.querySelectorAll<HTMLElement>('.dial-wrap'));
-  if (!cards.length) return;
+  const viewportWidth = track.clientWidth;
+  if (!cards.length || track.scrollWidth <= viewportWidth) return;
 
-  // Largura/gap vêm de constantes — sem leitura de offsetWidth por card.
-  // Lemos viewport.offsetWidth (uma vez), mas só depois de todos os cards
-  // terem largura fixa via classes Tailwind do cardHTML.
-  const cardW = CARD_WIDTH_PX + CARD_GAP_PX;
-  const visibleCount = Math.max(1, Math.ceil(viewport.offsetWidth / cardW));
-  const shouldLoop = cards.length > visibleCount;
+  // A largura vem de um único card por carrossel, inclusive no breakpoint móvel.
+  const cardStep = cards[0].offsetWidth + Number.parseFloat(getComputedStyle(track).columnGap);
+  const visibleCount = Math.max(1, Math.ceil(viewportWidth / cardStep));
+  const scrollAmount = cardStep * Math.max(1, Math.floor(visibleCount / 2));
+  const controls = viewport.closest('.bd-group')!.querySelector<HTMLElement>('.bd-carousel-controls')!;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  controls.classList.replace('hidden', 'flex');
+  controls.querySelector('.left')!.addEventListener('click', () => scroll(-scrollAmount));
+  controls.querySelector('.right')!.addEventListener('click', () => scroll(scrollAmount));
 
-  const leftBtn = viewport.querySelector<HTMLElement>('.bd-carousel-arrow.left')!;
-  const rightBtn = viewport.querySelector<HTMLElement>('.bd-carousel-arrow.right')!;
-
-  if (!shouldLoop) {
-    leftBtn.classList.add('hidden');
-    if (cards.length <= visibleCount) rightBtn.classList.add('hidden');
+  function scroll(left: number): void {
+    track.scrollBy({ left, behavior: reducedMotion.matches ? 'instant' : 'smooth' });
   }
-  viewport.addEventListener('mouseenter', () => {
-    if (!leftBtn.classList.contains('hidden')) leftBtn.classList.add('opacity-100');
-    if (!rightBtn.classList.contains('hidden')) rightBtn.classList.add('opacity-100');
-  });
-  viewport.addEventListener('mouseleave', () => {
-    leftBtn.classList.remove('opacity-100');
-    rightBtn.classList.remove('opacity-100');
-  });
-
-  const scrollAmount = cardW * Math.max(1, Math.floor(visibleCount / 2));
-  leftBtn.addEventListener('click', (e) => { e.stopPropagation(); track.scrollBy({ left: -scrollAmount, behavior: 'smooth' }); });
-  rightBtn.addEventListener('click', (e) => { e.stopPropagation(); track.scrollBy({ left: scrollAmount, behavior: 'smooth' }); });
-
-  if (!shouldLoop) return;
 
   // Bloco de clones montado em DocumentFragment (DOM offline) e inserido em
   // dois lotes. Um deep-clone por slot, sem layout thrash por card.
-  const cloneCount = visibleCount + 1;
+  const cloneCount = Math.min(cards.length, visibleCount + 1);
 
-  const prependFrag = document.createDocumentFragment();
-  for (let i = cards.length - cloneCount; i < cards.length; i++) {
-    const idx = Math.max(0, i);
-    const clone = cards[idx].cloneNode(true) as HTMLElement;
-    clone.classList.add('bd-carousel-clone');
-    const actions = clone.querySelector('.dial-actions');
-    if (actions) actions.remove();
-    prependFrag.appendChild(clone);
+  function cloneCards(start: number, end: number): DocumentFragment {
+    const fragment = document.createDocumentFragment();
+    for (let i = start; i < end; i++) {
+      const clone = cards[i].cloneNode(true) as HTMLElement;
+      clone.classList.add('bd-carousel-clone');
+      clone.setAttribute('aria-hidden', 'true');
+      clone.querySelector<HTMLAnchorElement>('.bd-bookmark-link')!.tabIndex = -1;
+      clone.querySelector('.dial-actions')?.remove();
+      fragment.appendChild(clone);
+    }
+    return fragment;
   }
-  const appendFrag = document.createDocumentFragment();
-  for (let i = 0; i < cloneCount && i < cards.length; i++) {
-    const clone = cards[i].cloneNode(true) as HTMLElement;
-    clone.classList.add('bd-carousel-clone');
-    const actions = clone.querySelector('.dial-actions');
-    if (actions) actions.remove();
-    appendFrag.appendChild(clone);
-  }
-  track.insertBefore(prependFrag, track.firstChild);
-  track.appendChild(appendFrag);
 
-  track.style.scrollBehavior = 'auto';
-  track.scrollLeft = cloneCount * cardW;
-  track.style.scrollBehavior = 'smooth';
+  track.prepend(cloneCards(cards.length - cloneCount, cards.length));
+  track.append(cloneCards(0, cloneCount));
+  const realWidth = cards.length * cardStep;
+  const prependWidth = cloneCount * cardStep;
+  track.scrollLeft = prependWidth;
 
   let ticking = false;
-  const realWidth = cards.length * cardW;
-  const prependWidth = cloneCount * cardW;
-
   track.addEventListener('scroll', () => {
     if (ticking) return;
     ticking = true;
@@ -350,13 +339,9 @@ function setupCarousel(viewport: HTMLElement): void {
       const sl = track.scrollLeft;
       const maxReal = prependWidth + realWidth;
       if (sl >= maxReal) {
-        track.style.scrollBehavior = 'auto';
-        track.scrollLeft = prependWidth + (sl - maxReal);
-        track.style.scrollBehavior = 'smooth';
+        track.scrollLeft = sl - realWidth;
       } else if (sl <= 0) {
-        track.style.scrollBehavior = 'auto';
-        track.scrollLeft = maxReal - prependWidth + sl;
-        track.style.scrollBehavior = 'smooth';
+        track.scrollLeft = sl + realWidth;
       }
       ticking = false;
     });
@@ -372,8 +357,17 @@ window.addEventListener('resize', () => {
   }
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    console.log('[BD-PERF]', tstamp(), 'resize triggering renderAll');
-    if (STATE.all.length) renderAll();
+    const search = document.querySelector<HTMLInputElement>('#search')!;
+    if (!STATE.all.length || search.value.trim()) return;
+    const focusedArrow = document.activeElement?.closest<HTMLElement>('.bd-carousel-arrow');
+    const sectionId = focusedArrow?.closest<HTMLElement>('.bd-group')?.dataset.sectionId;
+    const arrowSide = focusedArrow?.classList.contains('left') ? 'left' : 'right';
+    renderAll();
+    if (sectionId) {
+      const group = document.querySelector(`.bd-group[data-section-id="${CSS.escape(sectionId)}"]`);
+      const arrow = group?.querySelector<HTMLElement>(`.bd-carousel-controls:not(.hidden) .${arrowSide}`);
+      (arrow ?? group?.querySelector<HTMLElement>('.bd-group-label'))?.focus({ preventScroll: true });
+    }
   }, 300);
 });
 
@@ -383,7 +377,8 @@ window.addEventListener('resize', () => {
 function renderSearch(q: string): void {
   const app = document.getElementById('app')!;
   if (!q.trim()) { renderAll(); return; }
-  const lq = q.toLowerCase();
+  cleanupDragState('renderSearch');
+  const lq = q.trim().toLowerCase();
   const res = STATE.all.filter((b) => {
     if (b.title.toLowerCase().indexOf(lq) !== -1) return true;
     if (b.url.toLowerCase().indexOf(lq) !== -1) return true;
@@ -393,19 +388,19 @@ function renderSearch(q: string): void {
     return false;
   });
   if (!res.length) {
-    app.innerHTML = `<div class="text-center py-10 opacity-50 text-sm">${esc(t('searchNoResults', [q]))}</div>`;
+    thumbObserver?.disconnect();
+    app.innerHTML = `<p role="status" class="rounded-2xl border border-base-content/10 bg-base-100 px-4 py-8 text-center text-sm text-base-content/70">${esc(t('searchNoResults', [q]))}</p>`;
     return;
   }
   const show = res.slice(0, 20);
   const cards = show.map((bm) => cardHTML(bm)).join('');
   app.innerHTML = `
-    <section class="mb-8">
-      <div class="flex items-center gap-2.5 pl-1 mb-3.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-base-content/40"></span>
-        <span class="inline-flex">${iconSVG('search', 16)}</span>
-        <span class="text-sm font-medium opacity-90">"${esc(q)}"</span>
-      </div>
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-2.5">${cards}</div>
+    <section class="min-w-0 rounded-2xl border border-base-content/10 bg-base-100 p-3 sm:p-4">
+      <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold">
+        <span class="inline-flex shrink-0" aria-hidden="true">${iconSVG('search', 16)}</span>
+        <span class="min-w-0 truncate">"${esc(q)}"</span>
+      </h2>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(125px,1fr))] gap-2.5 [&>.dial-wrap]:w-full [&>.dial-wrap]:min-w-0 md:grid-cols-[repeat(auto-fill,minmax(170px,1fr))]">${cards}</div>
     </section>
   `;
   initThumbObserver();
@@ -421,7 +416,8 @@ function startRenameSection(labelEl: HTMLElement): void {
   console.warn('[BD-RENAME] startRenameSection called', { sectionId, label: sec.label });
   const oldLabel = sec.label;
   labelEl.classList.add('bg-base-content/10', 'outline', 'outline-1', 'outline-primary/50');
-  labelEl.setAttribute('contenteditable', 'true');
+  labelEl.setAttribute('contenteditable', 'plaintext-only');
+  labelEl.setAttribute('role', 'textbox');
   labelEl.focus();
   const range = document.createRange();
   range.selectNodeContents(labelEl);
@@ -434,6 +430,7 @@ function startRenameSection(labelEl: HTMLElement): void {
   function finish(save: boolean): void {
     labelEl.classList.remove('bg-base-content/10', 'outline', 'outline-1', 'outline-primary/50');
     labelEl.removeAttribute('contenteditable');
+    labelEl.setAttribute('role', 'button');
     const newLabel = (labelEl.textContent || '').trim();
     if (save && newLabel && newLabel !== oldLabel && sec) {
       sec.label = newLabel;
@@ -491,8 +488,22 @@ function setupBookmarkListeners(): void {
         break;
       }
     }
-    const titleEl = document.querySelector('.dial-title[data-bmid="' + id + '"]');
-    if (titleEl && changes.title !== undefined) titleEl.textContent = clean(changes.title);
+    document.querySelectorAll<HTMLElement>(`.dial-wrap[data-bm-id="${CSS.escape(id)}"]`).forEach((card) => {
+      const link = card.querySelector<HTMLAnchorElement>('.bd-bookmark-link')!;
+      if (changes.title !== undefined) {
+        const title = clean(changes.title) || t('untitled');
+        card.title = changes.title;
+        link.setAttribute('aria-label', title);
+        card.querySelector('.dial-title')!.textContent = title;
+        card.querySelectorAll<HTMLElement>('.btn-edit, .btn-del').forEach((button) => {
+          button.dataset.title = changes.title;
+        });
+      }
+      if (changes.url !== undefined) {
+        card.dataset.href = changes.url;
+        link.href = changes.url;
+      }
+    });
   });
 }
 
@@ -514,7 +525,8 @@ export async function init(): Promise<void> {
   const settingsBtn = document.getElementById('btn-settings');
   if (settingsBtn) settingsBtn.innerHTML = iconSVG('settings', 18);
   const shuffleBtn = document.getElementById('btn-shuffle');
-  if (shuffleBtn) shuffleBtn.innerHTML = iconSVG('shuffle', 16) + `<span class="ml-1.5">${esc(t('shuffle'))}</span>`;
+  if (shuffleBtn) shuffleBtn.innerHTML = iconSVG('shuffle', 16) + `<span class="hidden sm:inline">${esc(t('shuffle'))}</span>`;
+  document.getElementById('search-icon')!.innerHTML = iconSVG('search', 17);
 
   try {
     const tree = await getTree();
@@ -583,7 +595,9 @@ export async function init(): Promise<void> {
 // ============================================================
 export function wireEvents(): void {
   // Clique delegado em cards + ações
-  document.getElementById('app')!.addEventListener('click', (e) => {
+  const app = document.getElementById('app')!;
+  const search = document.querySelector<HTMLInputElement>('#search')!;
+  app.addEventListener('click', (e) => {
     const target = e.target as Element;
     const editBtn = target.closest('.btn-edit');
     if (editBtn) {
@@ -598,48 +612,58 @@ export function wireEvents(): void {
       return;
     }
     const labelEl = target.closest<HTMLElement>('.bd-group-label[data-section-id]');
-    if (labelEl && labelEl.getAttribute('contenteditable') !== 'true') {
+    if (labelEl && !labelEl.isContentEditable) {
       console.log('[BD-CLICK] label click -> startRename', { sectionId: labelEl.getAttribute('data-section-id') });
       e.preventDefault(); e.stopPropagation();
       startRenameSection(labelEl);
       return;
     }
-    const card = target.closest('.dial-wrap[data-href]');
-    if (card) {
-      const href = card.getAttribute('data-href');
-      if (!href) return;
-      const vid = ytId(href);
-      if (vid) {
-        // Vídeo do YouTube toca em modal na própria new tab.
-        openVideoModal(vid, href, card.getAttribute('title') || '');
-        return;
-      }
-      window.location.href = href;
+    const link = target.closest<HTMLAnchorElement>('.bd-bookmark-link');
+    if (!link || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const href = link.getAttribute('href') || '';
+    const vid = ytId(href);
+    if (vid) {
+      // Vídeo do YouTube toca em modal na própria new tab.
+      e.preventDefault();
+      openVideoModal(vid, href, link.closest<HTMLElement>('.dial-wrap')?.title || '');
+    }
+  });
+
+  app.addEventListener('keydown', (e) => {
+    if (e.defaultPrevented || (e.key !== 'Enter' && e.key !== ' ')) return;
+    const label = (e.target as Element).closest<HTMLElement>('.bd-group-label[data-section-id]');
+    if (label && !label.isContentEditable) {
+      e.preventDefault();
+      startRenameSection(label);
     }
   });
 
   document.getElementById('btn-shuffle')!.addEventListener('click', () => {
-    (document.getElementById('search') as HTMLInputElement).value = '';
+    search.value = '';
     renderAll();
   });
 
   document.getElementById('btn-settings')!.addEventListener('click', () => openSectionsModal());
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  document.getElementById('search')!.addEventListener('input', (e) => {
+  search.addEventListener('input', () => {
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => renderSearch((e.target as HTMLInputElement).value), 200);
+    debounceTimer = setTimeout(() => renderSearch(search.value), 200);
   });
 
   document.addEventListener('keydown', (e) => {
-    const search = document.getElementById('search') as HTMLInputElement;
-    if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+    if (e.defaultPrevented || document.querySelector('.bd-modal-overlay, dialog[open]')) return;
+    const target = e.target as Element;
+    if (target.closest('#rss-feed')) return;
+    const editing = target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+    if (e.key === '/' && !editing && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       search.focus();
     }
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && search.value && (!editing || target === search)) {
+      e.preventDefault();
+      clearTimeout(debounceTimer);
       search.value = '';
-      search.blur();
       renderAll();
     }
   });
@@ -650,19 +674,14 @@ export function wireEvents(): void {
 // ============================================================
 export function setupBraveFooterHiding(): void {
   function hideBraveFooter(): void {
-    const known = ['app', 'stats', 'search', 'btn-shuffle', 'btn-settings'];
+    const known = ['dashboard-header', 'dashboard'];
     const bodyChildren = document.body.children;
     for (let i = 0; i < bodyChildren.length; i++) {
       const el = bodyChildren[i] as HTMLElement;
       const tag = el.tagName.toLowerCase();
       if (tag === 'script' || tag === 'link' || tag === 'style') continue;
-      if (el.classList.contains('header') || el.id === 'app') continue;
-      if (el.classList.contains('bd-modal-overlay')) continue;
-      if (el.id === 'search') continue;
-      if (!el.id || known.indexOf(el.id) === -1) {
-        if (el.className && (el.className.toString().indexOf('header') !== -1)) continue;
-        el.style.display = 'none';
-      }
+      if (el.classList.contains('bd-modal-overlay') || tag === 'dialog') continue;
+      if (!known.includes(el.id)) el.style.display = 'none';
     }
   }
   hideBraveFooter();

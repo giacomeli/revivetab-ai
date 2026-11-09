@@ -11,7 +11,6 @@ html, body {
 body {
   @apply bg-base-200 text-base-content;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  padding: 28px 36px 60px;
 }
 
 /* O gradiente índigo/roxo da marca só existe no tema clássico. */
@@ -23,20 +22,17 @@ body {
 /* ============================================================
    Drag-and-drop visuals
    ============================================================ */
-.dial-wrap[draggable="true"] { cursor: grab; }
+.dial-wrap[draggable="true"] .bd-bookmark-link { cursor: grab; }
 .dial-wrap.bd-card-dragging  { opacity: 0.35; cursor: grabbing; }
 
 /* Drop-zone indicator: only renders while body has .bd-dragging. The
    :not(.bd-dragging) reset below ensures that the moment we remove that
    class, all indicators disappear — even if .bd-drop-target leaks. */
-body.bd-dragging .bd-group .bd-group-head {
-  @apply outline-dashed outline-2 outline-base-content/20;
-  outline-offset: 4px;
-  border-radius: 6px;
-  transition: outline 0.12s ease, background 0.12s ease;
+body.bd-dragging .bd-group {
+  @apply outline-dashed outline-2 -outline-offset-2 outline-base-content/25;
 }
-body.bd-dragging .bd-group.bd-drop-target .bd-group-head {
-  @apply outline outline-2 outline-primary/80 bg-primary/10;
+body.bd-dragging .bd-group.bd-drop-target {
+  @apply outline outline-primary bg-primary/10;
 }
 body.bd-dragging .bd-empty-section {
   @apply border-primary/50 text-base-content/70;
@@ -44,27 +40,23 @@ body.bd-dragging .bd-empty-section {
 
 /* Hard reset: if body does NOT have bd-dragging, force-clear all visual
    drag indicators regardless of stale classes. */
-body:not(.bd-dragging) .bd-group-head {
-  outline: none !important;
-  background: transparent;
-}
+body:not(.bd-dragging) .bd-group.bd-drop-target { outline: none !important; }
 body:not(.bd-dragging) .bd-card-dragging {
   opacity: 1;
   cursor: pointer;
 }
 
-/* Label focus: avoid showing the browser's default focus ring around the
-   editable title (it can be confused with the drag outline). */
-.bd-group-label:focus,
-.bd-group-label:focus-visible {
-  outline: none;
+/* As setas mantêm a navegação disponível também onde a barra é oculta. */
+.bd-carousel-track { scrollbar-width: none; }
+
+@media (hover: none) {
+  .dial-actions { @apply pointer-events-auto opacity-100; }
 }
 
 /* ============================================================
    Responsive
    ============================================================ */
-@media (max-width: 768px) {
-  body { padding: 16px; }
+@media (max-width: 767px) {
   .bd-carousel-track .dial-wrap { width: 140px !important; min-width: 140px !important; }
   .bd-card-thumb { height: 85px !important; }
 }

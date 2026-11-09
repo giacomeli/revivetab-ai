@@ -3,6 +3,7 @@ import './assets/styles.css';
 import { applyTheme, watchSystemTheme } from './services/theme';
 import { t, uiLanguage } from './services/i18n';
 import { init, wireEvents, setupBraveFooterHiding } from './ui/dial';
+import { initRssPanel } from './ui/rss-panel';
 
 // Aplica as traduções dos elementos estáticos do index.html (marcados com
 // atributos data-i18n-*) e o idioma real do documento.
@@ -17,6 +18,9 @@ function applyStaticI18n(): void {
   document.querySelectorAll<HTMLElement>('[data-i18n-aria-label]').forEach((el) => {
     el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel!));
   });
+  document.querySelectorAll<HTMLElement>('[data-i18n-text]').forEach((el) => {
+    el.textContent = t(el.dataset.i18nText!);
+  });
 }
 
 applyTheme();
@@ -25,3 +29,4 @@ applyStaticI18n();
 setupBraveFooterHiding();
 wireEvents();
 init();
+initRssPanel(document.getElementById('rss-feed')!);

@@ -32,7 +32,7 @@ export function setupDragAndDrop(): void {
       real++;
     }
   }
-  const zones = document.querySelectorAll<HTMLElement>('.bd-group-head, .bd-carousel');
+  const zones = document.querySelectorAll<HTMLElement>('.bd-group');
   for (const zone of zones) _wireZone(zone);
   const dur = (performance.now() - start).toFixed(1);
   log('setupDragAndDrop wired', { realCards: real, clones, zones: zones.length, durMs: dur });
@@ -128,38 +128,31 @@ function _wireCard(card: HTMLElement): void {
   });
 }
 
-function _wireZone(zone: HTMLElement): void {
-  const group = zone.closest('.bd-group');
-  if (!group) return;
-  const sectionId = group.getAttribute('data-section-id');
-  const zoneKind = zone.classList.contains('bd-group-head') ? 'head' : 'carousel';
+function _wireZone(group: HTMLElement): void {
+  const sectionId = group.dataset.sectionId;
 
-  zone.addEventListener('dragover', (e) => {
+  group.addEventListener('dragover', (e) => {
     if (!document.body.classList.contains('bd-dragging')) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
     if (!group.classList.contains('bd-drop-target')) {
-      log('dragenter zone', { sectionId, zoneKind });
+      log('dragenter zone', { sectionId });
     }
     group.classList.add('bd-drop-target');
   });
-  zone.addEventListener('dragleave', (e) => {
+  group.addEventListener('dragleave', (e) => {
     if (!group.contains(e.relatedTarget as Node | null)) {
-      log('dragleave zone', { sectionId, zoneKind });
+      log('dragleave zone', { sectionId });
       group.classList.remove('bd-drop-target');
     }
   });
-  zone.addEventListener('drop', (e) => {
+  group.addEventListener('drop', (e) => {
+    const bmId = e.dataTransfer?.getData('text/plain');
+    if (!bmId || bmId !== _currentDragId || !sectionId) return;
     e.preventDefault();
-    const bmId = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
-    const destSectionId = group.getAttribute('data-section-id');
-    log('drop on zone', { destSectionId, zoneKind, bmId, body: bodyClasses() });
+    log('drop on zone', { destSectionId: sectionId, bmId, body: bodyClasses() });
     cleanupDragState('zone:drop');
-    if (!bmId || !destSectionId) {
-      log('drop aborted (no bmId or destSectionId)');
-      return;
-    }
-    moveBookmark(bmId, destSectionId);
+    moveBookmark(bmId, sectionId);
   });
 }
 

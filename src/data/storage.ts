@@ -1,7 +1,7 @@
 // data/storage.ts — wrapper fino sobre chrome.storage.local.
 
 import type {
-  AiConfig, InitialBackup, Membership, MembershipUndoSnapshot, Meta, Section, TreeNode,
+  AiConfig, InitialBackup, Membership, MembershipUndoSnapshot, Meta, RssSource, Section, TreeNode,
 } from '../types';
 import { getTree } from './bookmarks';
 
@@ -12,6 +12,7 @@ export const BD_KEYS = {
   initialBackup: 'bd:initial-backup',
   ai: 'bd:ai',
   membershipUndo: 'bd:membership-undo',
+  rssSources: 'bd:rss-sources',
 } as const;
 
 function _get(keys: string[]): Promise<Record<string, unknown>> {
@@ -92,6 +93,26 @@ export async function clearMembershipUndo(): Promise<void> {
       if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
       resolve();
     });
+  });
+}
+
+export async function loadRssSources(): Promise<RssSource[]> {
+  const items = await _get([BD_KEYS.rssSources]);
+  return (items[BD_KEYS.rssSources] as RssSource[] | undefined) ?? [];
+}
+
+export function watchRssSources(listener: (sources: RssSource[]) => void): void {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    const change = changes[BD_KEYS.rssSources];
+    if (area === 'local' && change) listener((change.newValue as RssSource[] | undefined) ?? []);
+  });
+}
+
+export function updateRssSources(update: (sources: RssSource[]) => RssSource[]): Promise<void> {
+  return navigator.locks.request(BD_KEYS.rssSources, async () => {
+    const current = await loadRssSources();
+    const next = update(current);
+    if (next !== current) await _set({ [BD_KEYS.rssSources]: next });
   });
 }
 
